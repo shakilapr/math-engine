@@ -1,0 +1,202 @@
+{
+  "scripts": [
+    {
+      "id": "1d2ad5ad",
+      "name": "Quadratic Equation Solver",
+      "description": "Solves quadratic equations of form a*x^2 + b*x + c = 0",
+      "category": "algebra",
+      "tags": [
+        "quadratic",
+        "polynomial",
+        "roots"
+      ],
+      "filename": "1d2ad5ad_quadratic_equation_solver.py"
+    },
+    {
+      "id": "cbae88b0",
+      "name": "Basic Derivative",
+      "description": "Computes derivative of polynomial functions",
+      "category": "calculus",
+      "tags": [
+        "derivative",
+        "polynomial",
+        "power rule"
+      ],
+      "filename": "cbae88b0_basic_derivative.py"
+    },
+    {
+      "id": "cae422db",
+      "name": "Indefinite Integral of sin(x)",
+      "description": "Computes \u222b sin(x) dx",
+      "category": "calculus",
+      "tags": [
+        "integral",
+        "antiderivative",
+        "trigonometry"
+      ],
+      "filename": "cae422db_indefinite_integral_of_sin(x).py"
+    },
+    {
+      "id": "3c4d2a08",
+      "name": "Linear System Solver",
+      "description": "Solves 2x2 linear system",
+      "category": "linear_algebra",
+      "tags": [
+        "linear",
+        "system",
+        "2x2"
+      ],
+      "filename": "3c4d2a08_linear_system_solver.py"
+    },
+    {
+      "id": "b4e78e89",
+      "name": "Quadratic Equation Solver",
+      "description": "Solves quadratic equations of form a*x^2 + b*x + c = 0",
+      "category": "algebra",
+      "tags": [
+        "quadratic",
+        "polynomial",
+        "roots"
+      ],
+      "filename": "b4e78e89_quadratic_equation_solver.py"
+    },
+    {
+      "id": "b25683c1",
+      "name": "Basic Derivative",
+      "description": "Computes derivative of polynomial functions",
+      "category": "calculus",
+      "tags": [
+        "derivative",
+        "polynomial",
+        "power rule"
+      ],
+      "filename": "b25683c1_basic_derivative.py"
+    },
+    {
+      "id": "8108a9e1",
+      "name": "Indefinite Integral of sin(x)",
+      "description": "Computes \u222b sin(x) dx",
+      "category": "calculus",
+      "tags": [
+        "integral",
+        "antiderivative",
+        "trigonometry"
+      ],
+      "filename": "8108a9e1_indefinite_integral_of_sin_x_.py"
+    },
+    {
+      "id": "b81ca75b",
+      "name": "Linear System Solver",
+      "description": "Solves 2x2 linear system",
+      "category": "linear_algebra",
+      "tags": [
+        "linear",
+        "system",
+        "2x2"
+      ],
+      "filename": "b81ca75b_linear_system_solver.py"
+    },
+    {
+      "id": "86f1d70f",
+      "name": "Quadratic Equation Solver",
+      "description": "Solves quadratic equations of form a*x^2 + b*x + c = 0",
+      "category": "algebra",
+      "tags": [
+        "quadratic",
+        "polynomial",
+        "roots"
+      ],
+      "filename": "86f1d70f_quadratic_equation_solver.py"
+    },
+    {
+      "id": "c9cfbc4a",
+      "name": "Basic Derivative",
+      "description": "Computes derivative of polynomial functions",
+      "category": "calculus",
+      "tags": [
+        "derivative",
+        "polynomial",
+        "power rule"
+      ],
+      "filename": "c9cfbc4a_basic_derivative.py"
+    },
+    {
+      "id": "9fcd58f3",
+      "name": "Indefinite Integral of sin(x)",
+      "description": "Computes \u222b sin(x) dx",
+      "category": "calculus",
+      "tags": [
+        "integral",
+        "antiderivative",
+        "trigonometry"
+      ],
+      "filename": "9fcd58f3_indefinite_integral_of_sin_x_.py"
+    },
+    {
+      "id": "6444e27c",
+      "name": "Linear System Solver",
+      "description": "Solves 2x2 linear system",
+      "category": "linear_algebra",
+      "tags": [
+        "linear",
+        "system",
+        "2x2"
+      ],
+      "filename": "6444e27c_linear_system_solver.py"
+    },
+    {
+      "id": "76686552",
+      "name": "Limit sin(x)/x",
+      "description": "Evaluates limit of sin(x)/x as x -> 0",
+      "category": "calculus",
+      "tags": [
+        "limit",
+        "trigonometric",
+        "sinx/x"
+      ],
+      "filename": "76686552_limit_sin_x__x.py"
+    },
+    {
+      "id": "661b5e10",
+      "name": "desc\n[Using skill: mock_skill]",
+      "description": "desc\n[Using skill: mock_skill]",
+      "category": "other",
+      "tags": [],
+      "filename": "661b5e10_desc__using_skill__mock_skill_.py"
+    },
+    {
+      "id": "c6a49e48",
+      "name": "Find the Laurent series expansions of a rational function around z=0 in three di",
+      "description": "Find the Laurent series expansions of a rational function around z=0 in three different annular domains, and evaluate a contour integral using Cauchy's Residue Theorem.",
+      "category": "complex_analysis",
+      "tags": [
+        "Laurent series",
+        "partial fraction decomposition",
+        "geometric series expansion",
+        "annular domains",
+        "Cauchy's Residue Theorem",
+        "singularities",
+        "contour integration",
+        "residues"
+      ],
+      "filename": "c6a49e48_find_the_laurent_series_expansions_of_a_rational_function_around_z_0_in_three_di.py"
+    },
+    {
+      "id": "20eedc4e",
+      "name": "The problem has two parts: (a) Find the Laurent series expansions of the rationa",
+      "description": "The problem has two parts: (a) Find the Laurent series expansions of the rational function f(z) = 1/((z-1)(z-2)) about z0 = 0 in three different annular domains: |z| < 1, 1 < |z| < 2, and |z| > 2. (b) Use Cauchy's Residue Theorem to evaluate the contour integral of 1/sin(iz) along the circle |z| = 4.",
+      "category": "complex_analysis",
+      "tags": [
+        "Laurent series",
+        "partial fraction decomposition",
+        "geometric series expansion",
+        "annular domains",
+        "Cauchy's Residue Theorem",
+        "singularities (poles)",
+        "contour integration",
+        "residue calculation"
+      ],
+      "filename": "20eedc4e_the_problem_has_two_parts___a__find_the_laurent_series_expansions_of_the_rationa.py"
+    }
+  ]
+}

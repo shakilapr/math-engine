@@ -1,0 +1,359 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.11, pytest-8.4.2, pluggy-1.5.0
+rootdir: E:\projects\math-engine
+plugins: anyio-4.12.1, langsmith-0.6.7, docker-3.2.5
+collected 5 items
+
+test\test_skills.py ...FF                                                [100%]
+
+================================== FAILURES ===================================
+_________________________ test_registry_find_matching _________________________
+
+tmp_path = WindowsPath('C:/Users/logsh/AppData/Local/Temp/pytest-of-logsh/pytest-9/test_registry_find_matching0')
+
+    def test_registry_find_matching(tmp_path):
+        (tmp_path / "skills" / "math").mkdir(parents=True)
+        (tmp_path / "skills" / "math" / "SKILL.md").write_text(
+            "---\nname: math_skill\npatterns: ['calc']\n---\nbody", encoding="utf-8"
+        )
+    
+        registry = SkillRegistry(str(tmp_path))
+        # We patch _scan_directory to avoid loading builtins which might interfere
+        with patch.object(registry, "_scan_directory") as mock_scan:
+            # Manually load our temp skill
+            from skills.loader import load_skill_from_file
+            skill = load_skill_from_file(str(tmp_path / "skills" / "math" / "SKILL.md"))
+            registry.skills.append(skill)
+    
+            found = registry.find_skill("Please calc this")
+            assert found is not None
+            assert found.name == "math_skill"
+    
+            not_found = registry.find_skill("random text")
+>           assert not_found is None
+E           assert Skill(name='math_skill', description='', patterns=["['calc']"], template='body', examples=[], verification_logic='', v...\\Users\\logsh\\AppData\\Local\\Temp\\pytest-of-logsh\\pytest-9\\test_registry_find_matching0\\skills\\math\\SKILL.md') is None
+
+test\test_skills.py:99: AssertionError
+_______________________ test_engine_uses_skill[asyncio] _______________________
+
+self = <core.engine.MathEngine object at 0x000002642BF9A270>
+request = SolveRequest(input='test input', input_type=<InputType.TEXT: 'text'>, provider=<LLMProvider.GEMINI: 'gemini'>, show_steps=True, visualize=False)
+api_keys = None
+
+    async def solve(self, request: SolveRequest, api_keys: dict[str, str] | None = None) -> SolveResponse:
+        """Full pipeline: parse \u2192 understand \u2192 generate code \u2192 execute \u2192 explain \u2192 verify."""
+        try:
+            # 1. Parse input to LaTeX
+            problem_latex = await self._parse_input(request)
+    
+            # 2. Use LLM to understand problem and generate Python code
+            llm = get_llm_provider(request.provider, api_keys=api_keys)
+    
+            understanding = await llm.understand_problem(problem_latex)
+            category = understanding.get("category", "other")
+            try:
+                problem_category = ProblemCategory(category)
+            except ValueError:
+                problem_category = ProblemCategory.OTHER
+    
+            # 2.2 Check for applicable Skill
+            skill = self.skills.find_skill(problem_latex)
+            if skill:
+                logger.info(f"Matched skill: {skill.name}")
+                understanding["skill_template"] = skill.template
+                # Append skill info to description to help LLM know we are guiding it
+                understanding["description"] = (
+                    f"{understanding.get('description', '')}\n[Using skill: {skill.name}]"
+                )
+    
+            # 2.5 Try to find a matching script in library
+            library_script = self._try_find_library_script(problem_category, problem_latex, understanding)
+            if library_script:
+                solver_code = library_script
+                source = "library"
+            else:
+                # 3. Generate solver code via LLM
+                solver_code = await llm.generate_solver_code(problem_latex, understanding)
+                source = "llm"
+    
+            # 4. Execute the generated code in sandbox
+            exec_result = self.executor.execute(solver_code)
+            if not exec_result["success"]:
+                # Attempt self-improvement loop
+                try:
+                    logger.info("Execution failed ù triggering self-improvement analysis")
+                    context = FailureContext(
+                        problem_latex=problem_latex,
+                        category=category,
+                        error_message=exec_result.get('error', 'Unknown error'),
+                        generated_code=solver_code,
+                        stack_trace=exec_result.get('traceback', ''),
+                        provider=request.provider
+                    )
+                    proposal = await self.improver.analyze_failure(context)
+                    if proposal:
+                        logger.info(f"Self-improvement proposed: {proposal.analysis}")
+                        # In the future: await self.improver.apply_proposal(proposal)
+                        # For now, we just log the proposal to avoid unexpected changes during dev
+                except Exception as e:
+                    logger.error(f"Self-improvement loop failed: {e}")
+    
+                return SolveResponse(
+                    success=False,
+                    problem_latex=problem_latex,
+                    category=problem_category,
+                    generated_code=solver_code,
+                    error=f"Code execution failed: {exec_result['error']}",
+                )
+    
+            final_answer = str(exec_result.get("result", ""))
+            steps_raw = exec_result.get("steps", [])
+    
+            # 5. Generate step-by-step explanations via LLM
+            steps: list[SolutionStep] = []
+            if request.show_steps and steps_raw:
+                steps = await self.explainer.explain_steps(
+                    llm, problem_latex, steps_raw
+                )
+            elif request.show_steps:
+                # Generate steps from the solver code and final answer
+                steps = await self.explainer.explain_from_code(
+                    llm, problem_latex, solver_code, final_answer
+                )
+    
+            # 6. Cross-verify with multiple libraries
+            verifications = self.verifier.verify(problem_latex, final_answer, solver_code)
+    
+            # 7. Add the solved script to library (if it came from LLM)
+            if source == "llm":
+                # Generate a name from description or problem latex
+                name = understanding.get("description", problem_latex)[:80]
+                if not name.strip():
+                    name = f"Solve {problem_category.value}"
+                description = understanding.get("description", problem_latex)
+                # Use key concepts as tags
+                tags = understanding.get("key_concepts", [])
+                # Ensure tags are strings
+                tags = [str(tag) for tag in tags]
+                # Add primary script
+                try:
+                    self.script_library.add_script(
+                        name=name,
+                        description=description,
+                        code=solver_code,
+                        category=problem_category.value,
+                        tags=tags,
+                    )
+                except Exception as e:
+                    # Log but don't fail the request
+                    import traceback
+                    traceback.print_exc()
+    
+            # 8. Generate visualizations if requested
+            visualizations: list[Visualization] = []
+            if request.visualize:
+                visualizations = self.visualizer.generate(
+                    problem_latex, solver_code, exec_result
+                )
+    
+>           return SolveResponse(
+                success=True,
+                problem_latex=problem_latex,
+                category=problem_category,
+                steps=steps,
+                final_answer=final_answer,
+                final_answer_latex=exec_result.get("result_latex", final_answer),
+                verifications=verifications,
+                visualizations=visualizations,
+                generated_code=solver_code,
+            )
+E           pydantic_core._pydantic_core.ValidationError: 1 validation error for SolveResponse
+E           problem_latex
+E             Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.latex()' id='2629258969840'>, input_type=MagicMock]
+E               For further information visit https://errors.pydantic.dev/2.12/v/string_type
+
+backend\core\engine.py:177: ValidationError
+
+During handling of the above exception, another exception occurred:
+
+    @pytest.mark.anyio
+    async def test_engine_uses_skill():
+        # Setup Engine with mocked components
+        engine = MathEngine()
+        engine.executor = MagicMock()
+        engine.executor.execute.return_value = {"success": True, "result": "42"}
+    
+        # Mock SkillRegistry to return a specific skill
+        mock_skill = MagicMock()
+        mock_skill.name = "mock_skill"
+        mock_skill.template = "# Mock Template"
+        mock_skill.matches.return_value = True
+    
+        engine.skills = MagicMock(spec=SkillRegistry)
+        engine.skills.find_skill.return_value = mock_skill
+    
+        # Mock LLM
+        mock_llm = AsyncMock()
+        mock_llm.understand_problem.return_value = {"category": "test", "description": "desc"}
+        mock_llm.generate_solver_code.return_value = "print(42)"
+    
+        with patch("core.engine.get_llm_provider", return_value=mock_llm):
+>           await engine.solve(SolveRequest(input="test input", provider=LLMProvider.GEMINI))
+
+test\test_skills.py:125: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <core.engine.MathEngine object at 0x000002642BF9A270>
+request = SolveRequest(input='test input', input_type=<InputType.TEXT: 'text'>, provider=<LLMProvider.GEMINI: 'gemini'>, show_steps=True, visualize=False)
+api_keys = None
+
+    async def solve(self, request: SolveRequest, api_keys: dict[str, str] | None = None) -> SolveResponse:
+        """Full pipeline: parse \u2192 understand \u2192 generate code \u2192 execute \u2192 explain \u2192 verify."""
+        try:
+            # 1. Parse input to LaTeX
+            problem_latex = await self._parse_input(request)
+    
+            # 2. Use LLM to understand problem and generate Python code
+            llm = get_llm_provider(request.provider, api_keys=api_keys)
+    
+            understanding = await llm.understand_problem(problem_latex)
+            category = understanding.get("category", "other")
+            try:
+                problem_category = ProblemCategory(category)
+            except ValueError:
+                problem_category = ProblemCategory.OTHER
+    
+            # 2.2 Check for applicable Skill
+            skill = self.skills.find_skill(problem_latex)
+            if skill:
+                logger.info(f"Matched skill: {skill.name}")
+                understanding["skill_template"] = skill.template
+                # Append skill info to description to help LLM know we are guiding it
+                understanding["description"] = (
+                    f"{understanding.get('description', '')}\n[Using skill: {skill.name}]"
+                )
+    
+            # 2.5 Try to find a matching script in library
+            library_script = self._try_find_library_script(problem_category, problem_latex, understanding)
+            if library_script:
+                solver_code = library_script
+                source = "library"
+            else:
+                # 3. Generate solver code via LLM
+                solver_code = await llm.generate_solver_code(problem_latex, understanding)
+                source = "llm"
+    
+            # 4. Execute the generated code in sandbox
+            exec_result = self.executor.execute(solver_code)
+            if not exec_result["success"]:
+                # Attempt self-improvement loop
+                try:
+                    logger.info("Execution failed ù triggering self-improvement analysis")
+                    context = FailureContext(
+                        problem_latex=problem_latex,
+                        category=category,
+                        error_message=exec_result.get('error', 'Unknown error'),
+                        generated_code=solver_code,
+                        stack_trace=exec_result.get('traceback', ''),
+                        provider=request.provider
+                    )
+                    proposal = await self.improver.analyze_failure(context)
+                    if proposal:
+                        logger.info(f"Self-improvement proposed: {proposal.analysis}")
+                        # In the future: await self.improver.apply_proposal(proposal)
+                        # For now, we just log the proposal to avoid unexpected changes during dev
+                except Exception as e:
+                    logger.error(f"Self-improvement loop failed: {e}")
+    
+                return SolveResponse(
+                    success=False,
+                    problem_latex=problem_latex,
+                    category=problem_category,
+                    generated_code=solver_code,
+                    error=f"Code execution failed: {exec_result['error']}",
+                )
+    
+            final_answer = str(exec_result.get("result", ""))
+            steps_raw = exec_result.get("steps", [])
+    
+            # 5. Generate step-by-step explanations via LLM
+            steps: list[SolutionStep] = []
+            if request.show_steps and steps_raw:
+                steps = await self.explainer.explain_steps(
+                    llm, problem_latex, steps_raw
+                )
+            elif request.show_steps:
+                # Generate steps from the solver code and final answer
+                steps = await self.explainer.explain_from_code(
+                    llm, problem_latex, solver_code, final_answer
+                )
+    
+            # 6. Cross-verify with multiple libraries
+            verifications = self.verifier.verify(problem_latex, final_answer, solver_code)
+    
+            # 7. Add the solved script to library (if it came from LLM)
+            if source == "llm":
+                # Generate a name from description or problem latex
+                name = understanding.get("description", problem_latex)[:80]
+                if not name.strip():
+                    name = f"Solve {problem_category.value}"
+                description = understanding.get("description", problem_latex)
+                # Use key concepts as tags
+                tags = understanding.get("key_concepts", [])
+                # Ensure tags are strings
+                tags = [str(tag) for tag in tags]
+                # Add primary script
+                try:
+                    self.script_library.add_script(
+                        name=name,
+                        description=description,
+                        code=solver_code,
+                        category=problem_category.value,
+                        tags=tags,
+                    )
+                except Exception as e:
+                    # Log but don't fail the request
+                    import traceback
+                    traceback.print_exc()
+    
+            # 8. Generate visualizations if requested
+            visualizations: list[Visualization] = []
+            if request.visualize:
+                visualizations = self.visualizer.generate(
+                    problem_latex, solver_code, exec_result
+                )
+    
+            return SolveResponse(
+                success=True,
+                problem_latex=problem_latex,
+                category=problem_category,
+                steps=steps,
+                final_answer=final_answer,
+                final_answer_latex=exec_result.get("result_latex", final_answer),
+                verifications=verifications,
+                visualizations=visualizations,
+                generated_code=solver_code,
+            )
+    
+        except Exception as e:
+>           traceback.print_exc()
+            ^^^^^^^^^
+E           UnboundLocalError: cannot access local variable 'traceback' where it is not associated with a value
+
+backend\core\engine.py:190: UnboundLocalError
+---------------------------- Captured stdout call -----------------------------
+42
+42
+42
+============================== warnings summary ===============================
+test/test_skills.py::test_engine_uses_skill[asyncio]
+  E:\projects\math-engine\backend\core\explainer.py:89: RuntimeWarning: coroutine 'AsyncMockMixin._execute_mock_call' was never awaited
+    return self._parse_full_steps_response(response)
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED test/test_skills.py::test_registry_find_matching - assert Skill(name='...
+FAILED test/test_skills.py::test_engine_uses_skill[asyncio] - UnboundLocalErr...
+=================== 2 failed, 3 passed, 1 warning in 1.64s ====================

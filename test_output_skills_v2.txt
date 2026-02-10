@@ -1,0 +1,66 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.11, pytest-8.4.2, pluggy-1.5.0
+rootdir: E:\projects\math-engine
+plugins: anyio-4.12.1, langsmith-0.6.7, docker-3.2.5
+collected 5 items
+
+test\test_skills.py ....F                                                [100%]
+
+================================== FAILURES ===================================
+_______________________ test_engine_uses_skill[asyncio] _______________________
+
+    @pytest.mark.anyio
+    async def test_engine_uses_skill():
+        # Setup Engine with mocked components
+        engine = MathEngine()
+        engine.executor = MagicMock()
+        engine.executor.execute.return_value = {"success": True, "result": "42"}
+    
+        # Mock parser (to prevent using mocked libraries)
+        engine.parser = MagicMock()
+        engine.parser.text_to_latex.return_value = "test input"
+    
+        # Mock SkillRegistry to return a specific skill
+        mock_skill = MagicMock()
+        mock_skill.name = "mock_skill"
+        mock_skill.template = "# Mock Template"
+        mock_skill.matches.return_value = True
+    
+        engine.skills = MagicMock(spec=SkillRegistry)
+        engine.skills.find_skill.return_value = mock_skill
+    
+        # Mock LLM
+        mock_llm = AsyncMock()
+        mock_llm.understand_problem.return_value = {"category": "test", "description": "desc"}
+        mock_llm.generate_solver_code.return_value = "print(42)"
+    
+        with patch("core.engine.get_llm_provider", return_value=mock_llm):
+            await engine.solve(SolveRequest(input="test input", provider=LLMProvider.GEMINI))
+    
+            # Verify find_skill called
+            engine.skills.find_skill.assert_called_with("test input") # after parsing
+    
+            # Verify LLM understand called
+            mock_llm.understand_problem.assert_called()
+    
+            # Verify LLM generate called with understanding containing template
+            call_args = mock_llm.generate_solver_code.call_args
+>           assert call_args is not None
+E           assert None is not None
+
+test\test_skills.py:139: AssertionError
+---------------------------- Captured stdout call -----------------------------
+42
+42
+42
+============================== warnings summary ===============================
+test/test_skills.py::test_engine_uses_skill[asyncio]
+  E:\projects\math-engine\backend\core\explainer.py:89: RuntimeWarning: coroutine 'AsyncMockMixin._execute_mock_call' was never awaited
+    return self._parse_full_steps_response(response)
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED test/test_skills.py::test_engine_uses_skill[asyncio] - assert None is ...
+=================== 1 failed, 4 passed, 1 warning in 1.23s ====================

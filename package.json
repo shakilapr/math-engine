@@ -1,0 +1,11 @@
+{
+    "name": "math-engine-root",
+    "private": true,
+    "scripts": {
+        "dev": "cd frontend && bun run dev",
+        "build": "cd frontend && bun run build",
+        "start": "start.bat",
+        "backend": "cd backend && python main.py",
+        "frontend": "cd frontend && bun run dev"
+    }
+}

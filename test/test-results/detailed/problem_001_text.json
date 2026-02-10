@@ -1,0 +1,135 @@
+{
+  "problem_number": 1,
+  "category": "text",
+  "problem_text": "(a) Using the transformation equations between the Cartesian and Cylindrical coordinate systems, find the Jacobian matrix / of the transformation between Cartesian to Cylindrical and Cylindrical to Cartesian coordinate systems. \n\n(b) Verify the Gauss divergence theorem for $F=(x^{2}-yz)i+(y^{2}-xz)j+(z^{2}-xy)k$ taken over the rectangular parallelopiped bounded by the planes $x=0$, $x=1$, $y=0$, $y=2$, $z=0$ and $z=3$.",
+  "success": true,
+  "category_detected": "calculus",
+  "final_answer": "{'part_a': {'J_cart_to_cyl': Matrix([\n[cos(phi), -rho*sin(phi), 0],\n[sin(phi),  rho*cos(phi), 0],\n[       0,             0, 1]]), 'J_cyl_to_cart': Matrix([\n[x/sqrt(x**2 + y**2), y/sqrt(x**2 + y**2), 0],\n[   -y/(x**2 + y**2),     x/(x**2 + y**2), 0],\n[                  0,                   0, 1]])}, 'part_b': {'div_F': 2*x + 2*y + 2*z, 'volume_integral': 36, 'surface_fluxes': {'x0': 9, 'x1': -3, 'y0': 9/4, 'y2': 39/4, 'z0': 1, 'z3': 17}, 'total_flux': 36, 'verification': 0}}",
+  "final_answer_latex": "\\left\\{ \\mathtt{\\text{part\\_a}} : \\left\\{ \\mathtt{\\text{J\\_cart\\_to\\_cyl}} : \\left[\\begin{matrix}\\cos{\\left(\\phi \\right)} & - \\rho \\sin{\\left(\\phi \\right)} & 0\\\\\\sin{\\left(\\phi \\right)} & \\rho \\cos{\\left(\\phi \\right)} & 0\\\\0 & 0 & 1\\end{matrix}\\right], \\  \\mathtt{\\text{J\\_cyl\\_to\\_cart}} : \\left[\\begin{matrix}\\frac{x}{\\sqrt{x^{2} + y^{2}}} & \\frac{y}{\\sqrt{x^{2} + y^{2}}} & 0\\\\- \\frac{y}{x^{2} + y^{2}} & \\frac{x}{x^{2} + y^{2}} & 0\\\\0 & 0 & 1\\end{matrix}\\right]\\right\\}, \\  \\mathtt{\\text{part\\_b}} : \\left\\{ \\mathtt{\\text{div\\_F}} : 2 x + 2 y + 2 z, \\  \\mathtt{\\text{surface\\_fluxes}} : \\left\\{ \\mathtt{\\text{x0}} : 9, \\  \\mathtt{\\text{x1}} : -3, \\  \\mathtt{\\text{y0}} : \\frac{9}{4}, \\  \\mathtt{\\text{y2}} : \\frac{39}{4}, \\  \\mathtt{\\text{z0}} : 1, \\  \\mathtt{\\text{z3}} : 17\\right\\}, \\  \\mathtt{\\text{total\\_flux}} : 36, \\  \\mathtt{\\text{verification}} : 0, \\  \\mathtt{\\text{volume\\_integral}} : 36\\right\\}\\right\\}",
+  "steps": [
+    {
+      "step_number": 1,
+      "description": "We start by defining cylindrical coordinates (ρ, φ, z) and how they relate to Cartesian coordinates (x, y, z). Here ρ is the radial distance from the z-axis, φ is the azimuthal angle measured from the positive x-axis, and z is the same vertical coordinate. This transformation is fundamental because we'll need it to compute the Jacobian matrix, which tells us how small changes in cylindrical coordinates affect Cartesian coordinates.",
+      "latex": "\\text{Cylindrical to Cartesian: } x = \\rho \\cos\\phi,\\quad y = \\rho \\sin\\phi,\\quad z = z",
+      "result": "[rho*cos(phi), rho*sin(phi), z]",
+      "python_code": "x_expr = rho * sp.cos(phi); y_expr = rho * sp.sin(phi); z_expr = z"
+    },
+    {
+      "step_number": 2,
+      "description": "Now we compute the Jacobian matrix for the transformation from cylindrical to Cartesian coordinates. The Jacobian matrix J = ∂(x,y,z)/∂(ρ,φ,z) contains all first-order partial derivatives. Each row corresponds to a Cartesian coordinate (x, y, z), and each column corresponds to a cylindrical coordinate (ρ, φ, z). This matrix is essential for changing variables in multiple integrals, as its determinant gives the volume scaling factor.",
+      "latex": "J = \\frac{\\partial(x,y,z)}{\\partial(\\rho,\\phi,z)} = \\begin{bmatrix} \\frac{\\partial x}{\\partial\\rho} & \\frac{\\partial x}{\\partial\\phi} & \\frac{\\partial x}{\\partial z} \\\\ \\frac{\\partial y}{\\partial\\rho} & \\frac{\\partial y}{\\partial\\phi} & \\frac{\\partial y}{\\partial z} \\\\ \\frac{\\partial z}{\\partial\\rho} & \\frac{\\partial z}{\\partial\\phi} & \\frac{\\partial z}{\\partial z} \\end{bmatrix} = \\begin{bmatrix} \\cos\\phi & -\\rho\\sin\\phi & 0 \\\\ \\sin\\phi & \\rho\\cos\\phi & 0 \\\\ 0 & 0 & 1 \\end{bmatrix}",
+      "result": "Matrix([[cos(phi), -rho*sin(phi), 0], [sin(phi), rho*cos(phi), 0], [0, 0, 1]])",
+      "python_code": "J_cart_to_cyl = sp.Matrix([[sp.diff(x_expr, rho), sp.diff(x_expr, phi), sp.diff(x_expr, z)], [sp.diff(y_expr, rho), sp.diff(y_expr, phi), sp.diff(y_expr, z)], [sp.diff(z_expr, rho), sp.diff(z_expr, phi), sp.diff(z_expr, z)]]); J_cart_to_cyl_simplified = sp.simplify(J_cart_to_cyl)"
+    },
+    {
+      "step_number": 3,
+      "description": "Next, we define the inverse transformation: from Cartesian to cylindrical coordinates. Here ρ is computed as the distance from the z-axis, φ is the angle using the atan2 function (which correctly handles all quadrants), and z remains unchanged. This inverse transformation is needed to compute the Jacobian for the opposite coordinate change.",
+      "latex": "\\text{Cartesian to Cylindrical: } \\rho = \\sqrt{x^2 + y^2},\\quad \\phi = \\operatorname{atan2}(y, x),\\quad z = z",
+      "result": "[sqrt(x**2 + y**2), atan2(y, x), z_cart]",
+      "python_code": "rho_expr = sp.sqrt(x**2 + y**2); phi_expr = sp.atan2(y, x); z_expr2 = z_cart"
+    },
+    {
+      "step_number": 4,
+      "description": "We compute the Jacobian matrix for the transformation from Cartesian to cylindrical coordinates. This is J = ∂(ρ,φ,z)/∂(x,y,z), where each row corresponds to a cylindrical coordinate and each column to a Cartesian coordinate. This matrix is the inverse of the previous Jacobian (when the determinant is nonzero). It's useful for transforming differential operators like gradient or divergence into cylindrical coordinates.",
+      "latex": "J = \\frac{\\partial(\\rho,\\phi,z)}{\\partial(x,y,z)} = \\begin{bmatrix} \\frac{\\partial\\rho}{\\partial x} & \\frac{\\partial\\rho}{\\partial y} & \\frac{\\partial\\rho}{\\partial z} \\\\ \\frac{\\partial\\phi}{\\partial x} & \\frac{\\partial\\phi}{\\partial y} & \\frac{\\partial\\phi}{\\partial z} \\\\ \\frac{\\partial z}{\\partial x} & \\frac{\\partial z}{\\partial y} & \\frac{\\partial z}{\\partial z} \\end{bmatrix} = \\begin{bmatrix} \\frac{x}{\\sqrt{x^2+y^2}} & \\frac{y}{\\sqrt{x^2+y^2}} & 0 \\\\ -\\frac{y}{x^2+y^2} & \\frac{x}{x^2+y^2} & 0 \\\\ 0 & 0 & 1 \\end{bmatrix}",
+      "result": "Matrix([[x/sqrt(x**2 + y**2), y/sqrt(x**2 + y**2), 0], [-y/(x**2 + y**2), x/(x**2 + y**2), 0], [0, 0, 1]])",
+      "python_code": "J_cyl_to_cart = sp.Matrix([[sp.diff(rho_expr, x), sp.diff(rho_expr, y), sp.diff(rho_expr, z_cart)], [sp.diff(phi_expr, x), sp.diff(phi_expr, y), sp.diff(phi_expr, z_cart)], [sp.diff(z_expr2, x), sp.diff(z_expr2, y), sp.diff(z_expr2, z_cart)]]); J_cyl_to_cart_simplified = sp.simplify(J_cyl_to_cart)"
+    },
+    {
+      "step_number": 5,
+      "description": "Now we move to part (b) of the problem: verifying Gauss's divergence theorem for a given vector field F. First, we write F in component form. The theorem states that the flux of F through a closed surface equals the volume integral of its divergence over the enclosed region. We'll compute both sides separately and check if they match.",
+      "latex": "\\mathbf{F} = (x^2 - yz)\\mathbf{i} + (y^2 - xz)\\mathbf{j} + (z^2 - xy)\\mathbf{k} = \\begin{pmatrix} F_x \\\\ F_y \\\\ F_z \\end{pmatrix} = \\begin{pmatrix} x^2 - yz \\\\ y^2 - xz \\\\ z^2 - xy \\end{pmatrix}",
+      "result": "[x**2 - y*z, -x*z + y**2, -x*y + z**2]",
+      "python_code": "x, y, z = sp.symbols('x y z', real=True); Fx = x**2 - y*z; Fy = y**2 - x*z; Fz = z**2 - x*y"
+    },
+    {
+      "step_number": 6,
+      "description": "We compute the divergence of F, denoted ∇·F. The divergence is a scalar field that measures the net 'outflow' of the vector field at each point. It's calculated as the sum of partial derivatives of each component with respect to its corresponding coordinate. This divergence will be integrated over the volume for the left-hand side of Gauss's theorem.",
+      "latex": "\\nabla \\cdot \\mathbf{F} = \\frac{\\partial F_x}{\\partial x} + \\frac{\\partial F_y}{\\partial y} + \\frac{\\partial F_z}{\\partial z} = \\frac{\\partial}{\\partial x}(x^2 - yz) + \\frac{\\partial}{\\partial y}(y^2 - xz) + \\frac{\\partial}{\\partial z}(z^2 - xy) = 2x + 2y + 2z",
+      "result": "2*x + 2*y + 2*z",
+      "python_code": "div_F = sp.diff(Fx, x) + sp.diff(Fy, y) + sp.diff(Fz, z); div_F_simplified = sp.simplify(div_F)"
+    },
+    {
+      "step_number": 7,
+      "description": "Now we compute the volume integral of the divergence over the rectangular box V: x from 0 to 1, y from 0 to 2, z from 0 to 3. This is the left-hand side of Gauss's theorem. We integrate 2x + 2y + 2z over this region. The integration is straightforward because the limits are constant and the integrand separates nicely.",
+      "latex": "\\iiint_V (\\nabla \\cdot \\mathbf{F}) \\, dV = \\int_{z=0}^{3} \\int_{y=0}^{2} \\int_{x=0}^{1} (2x + 2y + 2z) \\, dx\\, dy\\, dz = 36",
+      "result": "36",
+      "python_code": "volume_integral = sp.integrate(div_F_simplified, (x, 0, 1), (y, 0, 2), (z, 0, 3)); volume_integral_simplified = sp.simplify(volume_integral)"
+    },
+    {
+      "step_number": 8,
+      "description": "We begin computing the surface flux (right-hand side of Gauss's theorem). The surface consists of six faces. For face x = 0, the outward normal points in the negative x-direction, so n = -i. The flux through this face is the integral of F·n over the surface. Since n = -i, F·n = -F_x. We evaluate F_x at x=0 and integrate over y and z.",
+      "latex": "\\Phi_{x=0} = \\iint_{S_{x=0}} \\mathbf{F} \\cdot \\mathbf{n} \\, dS = \\int_{y=0}^{2} \\int_{z=0}^{3} -F_x(0,y,z) \\, dy\\, dz = \\int_{0}^{2} \\int_{0}^{3} -(-yz) \\, dz\\, dy = \\int_{0}^{2} \\int_{0}^{3} yz \\, dz\\, dy = 9",
+      "result": "9",
+      "python_code": "flux_x0 = sp.integrate(-Fx.subs(x, 0), (y, 0, 2), (z, 0, 3)); flux_x0_simplified = sp.simplify(flux_x0)"
+    },
+    {
+      "step_number": 9,
+      "description": "For face x = 1, the outward normal is i (positive x-direction), so n = i and F·n = F_x. We evaluate F_x at x=1 and integrate over y and z. This gives the flux through the right face of the box.",
+      "latex": "\\Phi_{x=1} = \\iint_{S_{x=1}} \\mathbf{F} \\cdot \\mathbf{n} \\, dS = \\int_{y=0}^{2} \\int_{z=0}^{3} F_x(1,y,z) \\, dy\\, dz = \\int_{0}^{2} \\int_{0}^{3} (1 - yz) \\, dz\\, dy = -3",
+      "result": "-3",
+      "python_code": "flux_x1 = sp.integrate(Fx.subs(x, 1), (y, 0, 2), (z, 0, 3)); flux_x1_simplified = sp.simplify(flux_x1)"
+    },
+    {
+      "step_number": 10,
+      "description": "For face y = 0, the outward normal is -j (negative y-direction), so n = -j and F·n = -F_y. We evaluate F_y at y=0 and integrate over x and z. This is the flux through the bottom face in the y-direction.",
+      "latex": "\\Phi_{y=0} = \\iint_{S_{y=0}} \\mathbf{F} \\cdot \\mathbf{n} \\, dS = \\int_{x=0}^{1} \\int_{z=0}^{3} -F_y(x,0,z) \\, dx\\, dz = \\int_{0}^{1} \\int_{0}^{3} -(-xz) \\, dz\\, dx = \\int_{0}^{1} \\int_{0}^{3} xz \\, dz\\, dx = \\frac{9}{4}",
+      "result": "9/4",
+      "python_code": "flux_y0 = sp.integrate(-Fy.subs(y, 0), (x, 0, 1), (z, 0, 3)); flux_y0_simplified = sp.simplify(flux_y0)"
+    },
+    {
+      "step_number": 11,
+      "description": "For face y = 2, the outward normal is j (positive y-direction), so n = j and F·n = F_y. We evaluate F_y at y=2 and integrate over x and z. This is the flux through the top face in the y-direction.",
+      "latex": "\\Phi_{y=2} = \\iint_{S_{y=2}} \\mathbf{F} \\cdot \\mathbf{n} \\, dS = \\int_{x=0}^{1} \\int_{z=0}^{3} F_y(x,2,z) \\, dx\\, dz = \\int_{0}^{1} \\int_{0}^{3} (4 - xz) \\, dz\\, dx = \\frac{39}{4}",
+      "result": "39/4",
+      "python_code": "flux_y2 = sp.integrate(Fy.subs(y, 2), (x, 0, 1), (z, 0, 3)); flux_y2_simplified = sp.simplify(flux_y2)"
+    },
+    {
+      "step_number": 12,
+      "description": "For face z = 0, the outward normal is -k (negative z-direction), so n = -k and F·n = -F_z. We evaluate F_z at z=0 and integrate over x and y. This is the flux through the bottom face in the z-direction.",
+      "latex": "\\Phi_{z=0} = \\iint_{S_{z=0}} \\mathbf{F} \\cdot \\mathbf{n} \\, dS = \\int_{x=0}^{1} \\int_{y=0}^{2} -F_z(x,y,0) \\, dx\\, dy = \\int_{0}^{1} \\int_{0}^{2} -(-xy) \\, dy\\, dx = \\int_{0}^{1} \\int_{0}^{2} xy \\, dy\\, dx = 1",
+      "result": "1",
+      "python_code": "flux_z0 = sp.integrate(-Fz.subs(z, 0), (x, 0, 1), (y, 0, 2)); flux_z0_simplified = sp.simplify(flux_z0)"
+    },
+    {
+      "step_number": 13,
+      "description": "For face z = 3, the outward normal is k (positive z-direction), so n = k and F·n = F_z. We evaluate F_z at z=3 and integrate over x and y. This is the flux through the top face of the box.",
+      "latex": "\\Phi_{z=3} = \\iint_{S_{z=3}} \\mathbf{F} \\cdot \\mathbf{n} \\, dS = \\int_{x=0}^{1} \\int_{y=0}^{2} F_z(x,y,3) \\, dx\\, dy = \\int_{0}^{1} \\int_{0}^{2} (9 - xy) \\, dy\\, dx = 17",
+      "result": "17",
+      "python_code": "flux_z3 = sp.integrate(Fz.subs(z, 3), (x, 0, 1), (y, 0, 2)); flux_z3_simplified = sp.simplify(flux_z3)"
+    },
+    {
+      "step_number": 14,
+      "description": "Now we sum all six surface fluxes to get the total outward flux through the closed surface. This sum represents the right-hand side of Gauss's divergence theorem. We add the contributions from all faces carefully, noting that some fluxes are negative (meaning net inflow through that face).",
+      "latex": "\\Phi_{\\text{total}} = \\Phi_{x=0} + \\Phi_{x=1} + \\Phi_{y=0} + \\Phi_{y=2} + \\Phi_{z=0} + \\Phi_{z=3} = 9 + (-3) + \\frac{9}{4} + \\frac{39}{4} + 1 + 17 = 36",
+      "result": "36",
+      "python_code": "total_flux = (flux_x0_simplified + flux_x1_simplified + flux_y0_simplified + flux_y2_simplified + flux_z0_simplified + flux_z3_simplified); total_flux_simplified = sp.simplify(total_flux)"
+    },
+    {
+      "step_number": 15,
+      "description": "Finally, we verify Gauss's divergence theorem by comparing the volume integral of the divergence (computed in step 7) with the total surface flux (computed in step 14). Both equal 36, so their difference is zero. This confirms the theorem for this vector field and region, demonstrating that the net outward flux through the boundary equals the integral of the divergence throughout the volume.",
+      "latex": "\\iiint_V (\\nabla \\cdot \\mathbf{F}) \\, dV = \\oiint_S \\mathbf{F} \\cdot \\mathbf{n} \\, dS = 36 \\quad \\Rightarrow \\quad \\iiint_V (\\nabla \\cdot \\mathbf{F}) \\, dV - \\oiint_S \\mathbf{F} \\cdot \\mathbf{n} \\, dS = 0",
+      "result": "0",
+      "python_code": "verification = sp.simplify(volume_integral_simplified - total_flux_simplified)"
+    }
+  ],
+  "verifications": [
+    {
+      "library": "SymPy (symbolic)",
+      "result": "{'part_a': {'J_cart_to_cyl': Matrix([\n[cos(phi), -rho*sin(phi), 0],\n[sin(phi),  rho*cos(phi), 0],\n[       0,             0, 1]]), 'J_cyl_to_cart': Matrix([\n[x/sqrt(x**2 + y**2), y/sqrt(x**2 + y**2), 0],\n[   -y/(x**2 + y**2),     x/(x**2 + y**2), 0],\n[                  0,                   0, 1]])}, 'part_b': {'div_F': 2*x + 2*y + 2*z, 'volume_integral': 36, 'surface_fluxes': {'x0': 9, 'x1': -3, 'y0': 9/4, 'y2': 39/4, 'z0': 1, 'z3': 17}, 'total_flux': 36, 'verification': 0}}",
+      "matches": true
+    },
+    {
+      "library": "NumPy/SciPy (numerical)",
+      "result": "{'part_a': {'J_cart_to_cyl': Matrix([\n[cos(phi), -rho*sin(phi), 0],\n[sin(phi),  rho*cos(phi), 0],\n[       0,             0, 1]]), 'J_cyl_to_cart': Matrix([\n[x/sqrt(x**2 + y**2), y/sqrt(x**2 + y**2), 0],\n[   -y/(x**2 + y**2),     x/(x**2 + y**2), 0],\n[                  0,                   0, 1]])}, 'part_b': {'div_F': 2*x + 2*y + 2*z, 'volume_integral': 36, 'surface_fluxes': {'x0': 9, 'x1': -3, 'y0': 9/4, 'y2': 39/4, 'z0': 1, 'z3': 17}, 'total_flux': 36, 'verification': 0}}",
+      "matches": true
+    },
+    {
+      "library": "mpmath (arbitrary precision)",
+      "result": "{'part_a': {'J_cart_to_cyl': Matrix([\n[cos(phi), -rho*sin(phi), 0],\n[sin(phi),  rho*cos(phi), 0],\n[       0,             0, 1]]), 'J_cyl_to_cart': Matrix([\n[x/sqrt(x**2 + y**2), y/sqrt(x**2 + y**2), 0],\n[   -y/(x**2 + y**2),     x/(x**2 + y**2), 0],\n[                  0,                   0, 1]])}, 'part_b': {'div_F': 2*x + 2*y + 2*z, 'volume_integral': 36, 'surface_fluxes': {'x0': 9, 'x1': -3, 'y0': 9/4, 'y2': 39/4, 'z0': 1, 'z3': 17}, 'total_flux': 36, 'verification': 0}}",
+      "matches": true
+    }
+  ],
+  "error": null,
+  "generated_code": "import sympy as sp\nimport numpy as np\n\n# Part (a): Jacobian matrices for Cartesian-Cylindrical transformations\nrho, phi, z = sp.symbols('rho phi z', real=True, nonnegative=False)\nx, y, z_cart = sp.symbols('x y z_cart', real=True)\n\n# Transformation: Cartesian to Cylindrical\n# x = rho*cos(phi), y = rho*sin(phi), z = z\nx_expr = rho * sp.cos(phi)\ny_expr = rho * sp.sin(phi)\nz_expr = z\n\n# Jacobian matrix for Cartesian to Cylindrical: ∂(x,y,z)/∂(ρ,φ,z)\nJ_cart_to_cyl = sp.Matrix([[sp.diff(x_expr, rho), sp.diff(x_expr, phi), sp.diff(x_expr, z)],\n                           [sp.diff(y_expr, rho), sp.diff(y_expr, phi), sp.diff(y_expr, z)],\n                           [sp.diff(z_expr, rho), sp.diff(z_expr, phi), sp.diff(z_expr, z)]])\nJ_cart_to_cyl_simplified = sp.simplify(J_cart_to_cyl)\n\n# Transformation: Cylindrical to Cartesian\n# rho = sqrt(x^2 + y^2), phi = atan2(y, x), z = z\nrho_expr = sp.sqrt(x**2 + y**2)\nphi_expr = sp.atan2(y, x)\nz_expr2 = z_cart\n\n# Jacobian matrix for Cylindrical to Cartesian: ∂(ρ,φ,z)/∂(x,y,z)\nJ_cyl_to_cart = sp.Matrix([[sp.diff(rho_expr, x), sp.diff(rho_expr, y), sp.diff(rho_expr, z_cart)],\n                           [sp.diff(phi_expr, x), sp.diff(phi_expr, y), sp.diff(phi_expr, z_cart)],\n                           [sp.diff(z_expr2, x), sp.diff(z_expr2, y), sp.diff(z_expr2, z_cart)]])\nJ_cyl_to_cart_simplified = sp.simplify(J_cyl_to_cart)\n\n# Part (b): Gauss divergence theorem verification\n# Define vector field F = (x^2 - y*z)i + (y^2 - x*z)j + (z^2 - x*y)k\nx, y, z = sp.symbols('x y z', real=True)\nFx = x**2 - y*z\nFy = y**2 - x*z\nFz = z**2 - x*y\n\n# Compute divergence: ∇·F = ∂Fx/∂x + ∂Fy/∂y + ∂Fz/∂z\ndiv_F = sp.diff(Fx, x) + sp.diff(Fy, y) + sp.diff(Fz, z)\ndiv_F_simplified = sp.simplify(div_F)\n\n# Volume integral of divergence over rectangular parallelepiped: x∈[0,1], y∈[0,2], z∈[0,3]\nvolume_integral = sp.integrate(div_F_simplified, (x, 0, 1), (y, 0, 2), (z, 0, 3))\nvolume_integral_simplified = sp.simplify(volume_integral)\n\n# Surface integrals (flux through each face)\n# Face 1: x = 0, outward normal = -i, dS = dy dz\nflux_x0 = sp.integrate(-Fx.subs(x, 0), (y, 0, 2), (z, 0, 3))\nflux_x0_simplified = sp.simplify(flux_x0)\n\n# Face 2: x = 1, outward normal = i, dS = dy dz\nflux_x1 = sp.integrate(Fx.subs(x, 1), (y, 0, 2), (z, 0, 3))\nflux_x1_simplified = sp.simplify(flux_x1)\n\n# Face 3: y = 0, outward normal = -j, dS = dx dz\nflux_y0 = sp.integrate(-Fy.subs(y, 0), (x, 0, 1), (z, 0, 3))\nflux_y0_simplified = sp.simplify(flux_y0)\n\n# Face 4: y = 2, outward normal = j, dS = dx dz\nflux_y2 = sp.integrate(Fy.subs(y, 2), (x, 0, 1), (z, 0, 3))\nflux_y2_simplified = sp.simplify(flux_y2)\n\n# Face 5: z = 0, outward normal = -k, dS = dx dy\nflux_z0 = sp.integrate(-Fz.subs(z, 0), (x, 0, 1), (y, 0, 2))\nflux_z0_simplified = sp.simplify(flux_z0)\n\n# Face 6: z = 3, outward normal = k, dS = dx dy\nflux_z3 = sp.integrate(Fz.subs(z, 3), (x, 0, 1), (y, 0, 2))\nflux_z3_simplified = sp.simplify(flux_z3)\n\n# Total surface flux\ntotal_flux = (flux_x0_simplified + flux_x1_simplified + flux_y0_simplified +\n              flux_y2_simplified + flux_z0_simplified + flux_z3_simplified)\ntotal_flux_simplified = sp.simplify(total_flux)\n\n# Verification: volume_integral should equal total_flux\nverification = sp.simplify(volume_integral_simplified - total_flux_simplified)\n\n# Prepare final result\n_result = {\n    \"part_a\": {\n        \"J_cart_to_cyl\": J_cart_to_cyl_simplified,\n        \"J_cyl_to_cart\": J_cyl_to_cart_simplified\n    },\n    \"part_b\": {\n        \"div_F\": div_F_simplified,\n        \"volume_integral\": volume_integral_simplified,\n        \"surface_fluxes\": {\n            \"x0\": flux_x0_simplified,\n            \"x1\": flux_x1_simplified,\n            \"y0\": flux_y0_simplified,\n            \"y2\": flux_y2_simplified,\n            \"z0\": flux_z0_simplified,\n            \"z3\": flux_z3_simplified\n        },\n        \"total_flux\": total_flux_simplified,\n        \"verification\": verification\n    }\n}\n\n_result_latex = sp.latex(_result)\n\n_steps = [\n    {\n        \"description\": \"Define cylindrical coordinates and transformation to Cartesian\",\n        \"expression\": \"x = ρ cos(φ), y = ρ sin(φ), z = z\",\n        \"result\": str([x_expr, y_expr, z_expr]),\n        \"latex\": sp.latex([x_expr, y_expr, z_expr]),\n        \"code\": \"x_expr = rho * sp.cos(phi); y_expr = rho * sp.sin(phi); z_expr = z\"\n    },\n    {\n        \"description\": \"Compute Jacobian matrix for Cartesian to Cylindrical transformation\",\n        \"expression\": \"J = ∂(x,y,z)/∂(ρ,φ,z)\",\n        \"result\": str(J_cart_to_cyl_simplified),\n        \"latex\": sp.latex(J_cart_to_cyl_simplified),\n        \"code\": \"J_cart_to_cyl = sp.Matrix([[sp.diff(x_expr, rho), sp.diff(x_expr, phi), sp.diff(x_expr, z)], [sp.diff(y_expr, rho), sp.diff(y_expr, phi), sp.diff(y_expr, z)], [sp.diff(z_expr, rho), sp.diff(z_expr, phi), sp.diff(z_expr, z)]]); J_cart_to_cyl_simplified = sp.simplify(J_cart_to_cyl)\"\n    },\n    {\n        \"description\": \"Define Cartesian coordinates and transformation to Cylindrical\",\n        \"expression\": \"ρ = sqrt(x² + y²), φ = atan2(y, "
+}

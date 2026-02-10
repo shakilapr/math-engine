@@ -1,0 +1,13 @@
+{
+  "problem_number": 5,
+  "category": "text",
+  "problem_text": "(a) Use the method of separation of variables to solve the partial differential equation $\\frac{\\partial^{2}u}{\\partial x^{2}}=\\frac{\\partial u}{\\partial t}$. Given that $u(t,0)=u(t,1)=0$ and $u=\\Sigma_{n=1}^{\\infty}sin(n\\pi x)$ when $t\\rightarrow0$. \n\n(b) Using the cosine Fourier Transform, solve the partial differential equation $\\frac{\\partial u}{\\partial t}=\\frac{\\partial^{2}u}{\\partial x^{2}}$ for $0\\le x<\\infty$, $t>0$. Subject to the conditions: \n\ni. $u(x,0)=0$ for $x\\ge0$. \n\nii. $\\frac{\\partial u}{\\partial x}(0,t)=-1$",
+  "success": false,
+  "category_detected": null,
+  "final_answer": "",
+  "final_answer_latex": "",
+  "steps": [],
+  "verifications": [],
+  "error": "1 validation error for SolveResponse\nfinal_answer_latex\n  Input should be a valid string [type=string_type, input_value={'part_a': '\\\\sum_{n=1}^{...2 \\\\sqrt{t}} \\\\right)}'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/string_type",
+  "generated_code": ""
+}

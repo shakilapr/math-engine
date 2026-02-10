@@ -1,0 +1,29 @@
+name: mathengine
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - numpy
+  - scipy
+  - sympy
+  - matplotlib
+  - mpmath
+  - pillow
+  - pip
+  - pip:
+      - fastapi[standard]
+      - uvicorn[standard]
+      - python-multipart
+      - websockets
+      - pydantic>=2.0
+      - httpx
+      - pix2tex
+      - PyMuPDF
+      - pdfplumber
+      - plotly
+      - kaleido
+      - python-dotenv
+      - openai
+      - anthropic
+      - google-generativeai

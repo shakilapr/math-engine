@@ -1,0 +1,142 @@
+{
+  "problem_number": 2,
+  "category": "text",
+  "problem_text": "(a) Verify Stokes' theorem for a vector field is defined by $F=(x^{2}-y^{2})i+2xyj$ over a rectangular surface in xy plane bounded by lines $x = 0$, $x=a$, $y=0$ and $y=a$ where $a$ is a non-zero real number and the boundary is described by counterclockwise sense. \n\n(b) Find the constants $a$, $b$ and $c$ such that $F=(x+2y+az)i+(bx-3y-z)j+(4x+cy+2z)k$ is a conservative vector field and hence find $\\phi(x,y,z)$ such that $F=\\nabla\\phi$.",
+  "success": true,
+  "category_detected": "calculus",
+  "final_answer": "{'part_a': {'surface_integral': 2*a_rect**3, 'line_integral': 2*a_rect**3, 'verification': True}, 'part_b': {'constants': {'a': 4, 'b': 2, 'c': -1}, 'potential_function': x**2/2 + 2*x*(y + 2*z) - 3*y**2/2 - y*z + z**2}}",
+  "final_answer_latex": "\\text{(a) Surface integral: } \\iint_S (\\nabla \\times F) \\cdot \\mathbf{k} \\, dS = 2 a_{rect}^{3},\\quad \\text{Line integral: } \\oint_C F \\cdot d\\mathbf{r} = 2 a_{rect}^{3},\\quad \\text{Equality: } \\text{True}\\\\\\text{(b) Constants: } a = 4,\\; b = 2,\\; c = -1,\\quad \\phi(x,y,z) = \\frac{x^{2}}{2} + 2 x \\left(y + 2 z\\right) - \\frac{3 y^{2}}{2} - y z + z^{2}",
+  "steps": [
+    {
+      "step_number": 1,
+      "description": "We start part (a) by defining the given vector field F. It has two components: an i-component (x-direction) that depends on x² - y², and a j-component (y-direction) that depends on 2xy. This is a 2D vector field in the xy-plane.",
+      "latex": "\\mathbf{F} = (x^2 - y^2)\\mathbf{i} + (2xy)\\mathbf{j}",
+      "result": "F = (x^2 - y^2)i + 2xy j",
+      "python_code": "F_a = sp.Matrix([x**2 - y**2, 2*x*y, 0])"
+    },
+    {
+      "step_number": 2,
+      "description": "To apply Stokes' theorem, we need the curl of F. Stokes' theorem relates the line integral of F around a closed curve to the surface integral of the curl of F over the surface bounded by that curve. For a 2D field with only i and j components, the curl points in the k-direction and is computed as ∂F_y/∂x - ∂F_x/∂y.",
+      "latex": "\\nabla \\times \\mathbf{F} = \\left(\\frac{\\partial F_y}{\\partial x} - \\frac{\\partial F_x}{\\partial y}\\right)\\mathbf{k} = \\left(\\frac{\\partial (2xy)}{\\partial x} - \\frac{\\partial (x^2 - y^2)}{\\partial y}\\right)\\mathbf{k} = (2y - (-2y))\\mathbf{k} = 4y\\mathbf{k}",
+      "result": "curl_F = (0, 0, 4y)",
+      "python_code": "curl_F = sp.Matrix([sp.diff(F_a[2], y) - sp.diff(F_a[1], z),\n                    sp.diff(F_a[0], z) - sp.diff(F_a[2], x),\n                    sp.diff(F_a[1], x) - sp.diff(F_a[0], y)])"
+    },
+    {
+      "step_number": 3,
+      "description": "Stokes' theorem says: ∮_C F·dr = ∬_S (∇ × F)·n dS. Our surface S is the rectangle in the xy-plane, so its unit normal vector is n = k (pointing upward). The curl is (0,0,4y), so its dot product with k is simply 4y. We integrate this over the rectangular area from x=0 to a and y=0 to a.",
+      "latex": "\\iint_S (\\nabla \\times \\mathbf{F}) \\cdot \\mathbf{n} \\, dS = \\int_{y=0}^{a} \\int_{x=0}^{a} (4y) \\, dx \\, dy = \\int_{0}^{a} 4y \\left[ x \\right]_{0}^{a} dy = \\int_{0}^{a} 4a y \\, dy = 4a \\left[ \\frac{y^2}{2} \\right]_{0}^{a} = 2a^3",
+      "result": "2*a^3",
+      "python_code": "surface_integral = sp.integrate(sp.integrate(curl_F[2], (x, 0, a_rect)), (y, 0, a_rect))"
+    },
+    {
+      "step_number": 4,
+      "description": "Now we compute the line integral directly around the boundary to verify Stokes' theorem. The boundary consists of four straight edges traversed counterclockwise. First, along the bottom edge: y=0, x goes from 0 to a. On this edge, F = (x² - 0²)i + (2x·0)j = x² i. The differential dr = dx i (since y is constant). So F·dr = x² dx.",
+      "latex": "\\int_{C_1} \\mathbf{F} \\cdot d\\mathbf{r} = \\int_{x=0}^{a} (x^2 - 0^2) \\, dx = \\left[ \\frac{x^3}{3} \\right]_{0}^{a} = \\frac{a^3}{3}",
+      "result": "a^3/3",
+      "python_code": "line1 = sp.integrate(F_a[0].subs(y, 0), (x, 0, a_rect))"
+    },
+    {
+      "step_number": 5,
+      "description": "Second edge: right side, x=a, y goes from 0 to a. Here, F = (a² - y²)i + (2a y)j. dr = dy j (since x is constant). So F·dr = 2a y dy.",
+      "latex": "\\int_{C_2} \\mathbf{F} \\cdot d\\mathbf{r} = \\int_{y=0}^{a} 2a y \\, dy = 2a \\left[ \\frac{y^2}{2} \\right]_{0}^{a} = a^3",
+      "result": "a^3",
+      "python_code": "line2 = sp.integrate(F_a[1].subs(x, a_rect), (y, 0, a_rect))"
+    },
+    {
+      "step_number": 6,
+      "description": "Third edge: top side, y=a, but now we go from x=a back to x=0 (counterclockwise direction). So x decreases from a to 0. On this edge, F = (x² - a²)i + (2x a)j. dr = dx i (since y constant). But because we traverse in the negative x direction, we integrate from x=a to x=0.",
+      "latex": "\\int_{C_3} \\mathbf{F} \\cdot d\\mathbf{r} = \\int_{x=a}^{0} (x^2 - a^2) \\, dx = \\left[ \\frac{x^3}{3} - a^2 x \\right]_{a}^{0} = 0 - \\left( \\frac{a^3}{3} - a^3 \\right) = \\frac{2a^3}{3}",
+      "result": "2*a^3/3",
+      "python_code": "line3 = sp.integrate(F_a[0].subs(y, a_rect), (x, a_rect, 0))"
+    },
+    {
+      "step_number": 7,
+      "description": "Fourth edge: left side, x=0, going from y=a down to y=0 (counterclockwise). On this edge, F = (0 - y²)i + (0)j = -y² i. But dr = dy j (since x constant), so F·dr = (-y² i)·(dy j) = 0. So the integral is zero.",
+      "latex": "\\int_{C_4} \\mathbf{F} \\cdot d\\mathbf{r} = \\int_{y=a}^{0} 0 \\, dy = 0",
+      "result": "0",
+      "python_code": "line4 = sp.integrate(F_a[1].subs(x, 0), (y, a_rect, 0))"
+    },
+    {
+      "step_number": 8,
+      "description": "Now we sum the four line integrals to get the total circulation around the closed rectangle. Adding them up, we get the same result as the surface integral of the curl (2a³). This verifies Stokes' theorem for this vector field and surface.",
+      "latex": "\\oint_C \\mathbf{F} \\cdot d\\mathbf{r} = \\frac{a^3}{3} + a^3 + \\frac{2a^3}{3} + 0 = 2a^3",
+      "result": "2*a^3",
+      "python_code": "line_integral_total = line1 + line2 + line3 + line4"
+    },
+    {
+      "step_number": 9,
+      "description": "Now part (b): We have a 3D vector field F with unknown constants a, b, c. A vector field is conservative if its curl is zero everywhere. This means the work done along any path depends only on endpoints, and F can be written as the gradient of a scalar potential function φ.",
+      "latex": "\\mathbf{F} = (x + 2y + a z)\\mathbf{i} + (b x - 3y - z)\\mathbf{j} + (4x + c y + 2z)\\mathbf{k}",
+      "result": "F = (x + 2y + a z)i + (b x - 3y - z)j + (4x + c y + 2z)k",
+      "python_code": "F_b = sp.Matrix([x + 2*y + a*z, b*x - 3*y - z, 4*x + c*y + 2*z])"
+    },
+    {
+      "step_number": 10,
+      "description": "We compute the curl of F. The curl of a vector field (P, Q, R) is given by ∇ × F = (∂R/∂y - ∂Q/∂z, ∂P/∂z - ∂R/∂x, ∂Q/∂x - ∂P/∂y). Applying this to our F gives three component expressions.",
+      "latex": "\\nabla \\times \\mathbf{F} = \\left( \\frac{\\partial R}{\\partial y} - \\frac{\\partial Q}{\\partial z}, \\frac{\\partial P}{\\partial z} - \\frac{\\partial R}{\\partial x}, \\frac{\\partial Q}{\\partial x} - \\frac{\\partial P}{\\partial y} \\right) = \\left( c - (-1), \\, a - 4, \\, b - 2 \\right) = (c+1, \\, a-4, \\, b-2)",
+      "result": "curl_F_b = (c + 1, a - 4, b - 2)",
+      "python_code": "curl_F_b = sp.Matrix([sp.diff(F_b[2], y) - sp.diff(F_b[1], z),\n                      sp.diff(F_b[0], z) - sp.diff(F_b[2], x),\n                      sp.diff(F_b[1], x) - sp.diff(F_b[0], y)])"
+    },
+    {
+      "step_number": 11,
+      "description": "For F to be conservative, the curl must be the zero vector. So each component of the curl must be zero. This gives us three simple equations to solve for a, b, c.",
+      "latex": "c+1 = 0 \\quad \\Rightarrow \\quad c = -1 \\\\ a-4 = 0 \\quad \\Rightarrow \\quad a = 4 \\\\ b-2 = 0 \\quad \\Rightarrow \\quad b = 2",
+      "result": "a = 4, b = 2, c = -1",
+      "python_code": "sol = sp.solve([curl_F_b[0], curl_F_b[1], curl_F_b[2]], (a, b, c), dict=True)"
+    },
+    {
+      "step_number": 12,
+      "description": "Now we substitute these constants back into F to get the specific conservative vector field we'll work with to find the potential function φ.",
+      "latex": "\\mathbf{F} = (x + 2y + 4z)\\mathbf{i} + (2x - 3y - z)\\mathbf{j} + (4x - y + 2z)\\mathbf{k}",
+      "result": "F = (x + 2y + 4z)i + (2x - 3y - z)j + (4x - y + 2z)k",
+      "python_code": "F_b_sub = F_b.subs({a: a_val, b: b_val, c: c_val})"
+    },
+    {
+      "step_number": 13,
+      "description": "To find φ such that F = ∇φ, we start by integrating the x-component of F with respect to x. This gives us φ up to an arbitrary function g(y,z) that may depend on y and z but not on x.",
+      "latex": "\\phi = \\int (x + 2y + 4z) \\, dx = \\frac{x^2}{2} + 2xy + 4xz + g(y,z)",
+      "result": "φ = x^2/2 + 2xy + 4xz + g(y,z)",
+      "python_code": "phi = sp.integrate(F_b_sub[0], x) + sp.Function('g')(y, z)"
+    },
+    {
+      "step_number": 14,
+      "description": "We know that ∂φ/∂y should equal the y-component of F (2x - 3y - z). So we differentiate our expression for φ with respect to y and set it equal to F_y. This determines the partial derivative of g with respect to y.",
+      "latex": "\\frac{\\partial \\phi}{\\partial y} = 2x + \\frac{\\partial g}{\\partial y} = 2x - 3y - z \\quad \\Rightarrow \\quad \\frac{\\partial g}{\\partial y} = -3y - z",
+      "result": "∂g/∂y = -3y - z",
+      "python_code": "dg_dy = sp.diff(phi, y) - F_b_sub[1]\n# Solve for g_y: g_y = -3y - z"
+    },
+    {
+      "step_number": 15,
+      "description": "Now integrate ∂g/∂y with respect to y to find g up to a function h(z) that depends only on z. Then differentiate φ with respect to z and equate to F_z to determine h'(z). Integrating h'(z) gives h(z).",
+      "latex": "g(y,z) = \\int (-3y - z) \\, dy = -\\frac{3y^2}{2} - yz + h(z) \\\\ \\frac{\\partial \\phi}{\\partial z} = 4x - y + h'(z) = 4x - y + 2z \\quad \\Rightarrow \\quad h'(z) = 2z \\quad \\Rightarrow \\quad h(z) = z^2 + \\text{constant}",
+      "result": "h'(z) = 2z => h(z) = z^2 + constant",
+      "python_code": "dh_dz = sp.diff(phi, z) - F_b_sub[2]\n# Solve for h'(z): h'(z) = 2z"
+    },
+    {
+      "step_number": 16,
+      "description": "Combine all pieces to write the full potential function φ. The constant of integration can be set to zero since adding a constant doesn't change the gradient. Thus we have found φ such that ∇φ = F.",
+      "latex": "\\phi(x,y,z) = \\frac{x^2}{2} + 2xy + 4xz - \\frac{3y^2}{2} - yz + z^2",
+      "result": "φ = (x^2)/2 + 2xy + 4xz - (3y^2)/2 - yz + z^2",
+      "python_code": "phi_final = sp.simplify(phi)"
+    }
+  ],
+  "verifications": [
+    {
+      "library": "SymPy (symbolic)",
+      "result": "{'part_a': {'surface_integral': 2*a_rect**3, 'line_integral': 2*a_rect**3, 'verification': True}, 'part_b': {'constants': {'a': 4, 'b': 2, 'c': -1}, 'potential_function': x**2/2 + 2*x*(y + 2*z) - 3*y**2/2 - y*z + z**2}}",
+      "matches": true
+    },
+    {
+      "library": "NumPy/SciPy (numerical)",
+      "result": "{'part_a': {'surface_integral': 2*a_rect**3, 'line_integral': 2*a_rect**3, 'verification': True}, 'part_b': {'constants': {'a': 4, 'b': 2, 'c': -1}, 'potential_function': x**2/2 + 2*x*(y + 2*z) - 3*y**2/2 - y*z + z**2}}",
+      "matches": true
+    },
+    {
+      "library": "mpmath (arbitrary precision)",
+      "result": "{'part_a': {'surface_integral': 2*a_rect**3, 'line_integral': 2*a_rect**3, 'verification': True}, 'part_b': {'constants': {'a': 4, 'b': 2, 'c': -1}, 'potential_function': x**2/2 + 2*x*(y + 2*z) - 3*y**2/2 - y*z + z**2}}",
+      "matches": true
+    }
+  ],
+  "error": null,
+  "generated_code": "import sympy as sp\n\n# Define symbols\nx, y, z, a, b, c = sp.symbols('x y z a b c', real=True)\n# For part (a), 'a' is the side length of the rectangle\na_rect = sp.symbols('a_rect', positive=True)  # Use a_rect to avoid conflict with constant a in part (b)\n\n# Initialize steps list\n_steps = []\n\n# ==================== PART (a) ====================\n_steps.append({\n    \"description\": \"Define vector field F for part (a)\",\n    \"expression\": \"F = (x**2 - y**2)*i + (2*x*y)*j\",\n    \"result\": \"F = (x^2 - y^2)i + 2xy j\",\n    \"latex\": r\"F = (x^2 - y^2)\\mathbf{i} + 2xy \\mathbf{j}\",\n    \"code\": \"F_a = sp.Matrix([x**2 - y**2, 2*x*y, 0])\"\n})\nF_a = sp.Matrix([x**2 - y**2, 2*x*y, 0])\n\n_steps.append({\n    \"description\": \"Compute curl of F for part (a)\",\n    \"expression\": \"curl_F = ∇ × F\",\n    \"result\": \"curl_F = (0, 0, 4y)\",\n    \"latex\": r\"\\nabla \\times F = \\begin{pmatrix} 0 \\\\ 0 \\\\ 4y \\end{pmatrix}\",\n    \"code\": \"curl_F = sp.Matrix([sp.diff(F_a[2], y) - sp.diff(F_a[1], z),\\n                    sp.diff(F_a[0], z) - sp.diff(F_a[2], x),\\n                    sp.diff(F_a[1], x) - sp.diff(F_a[0], y)])\"\n})\ncurl_F = sp.Matrix([\n    sp.diff(F_a[2], y) - sp.diff(F_a[1], z),\n    sp.diff(F_a[0], z) - sp.diff(F_a[2], x),\n    sp.diff(F_a[1], x) - sp.diff(F_a[0], y)\n])\n\n_steps.append({\n    \"description\": \"Surface integral of curl over rectangle [0, a]×[0, a] in xy-plane (normal = k)\",\n    \"expression\": \"∬_S (curl_F · k) dS = ∫_{y=0}^{a} ∫_{x=0}^{a} (4y) dx dy\",\n    \"result\": \"2*a^3\",\n    \"latex\": r\"\\iint_S (\\nabla \\times F) \\cdot \\mathbf{k} \\, dS = \\int_{0}^{a} \\int_{0}^{a} 4y \\, dx \\, dy = 2a^3\",\n    \"code\": \"surface_integral = sp.integrate(sp.integrate(curl_F[2], (x, 0, a_rect)), (y, 0, a_rect))\"\n})\nsurface_integral = sp.integrate(sp.integrate(curl_F[2], (x, 0, a_rect)), (y, 0, a_rect))\n\n# Line integral around boundary (counterclockwise)\n# Path 1: from (0,0) to (a,0) along x-axis (y=0, dy=0)\n_steps.append({\n    \"description\": \"Line integral along bottom edge: y=0 from x=0 to a\",\n    \"expression\": \"∫_{C1} F·dr = ∫_{x=0}^{a} (x^2 - 0^2) dx\",\n    \"result\": \"a^3/3\",\n    \"latex\": r\"\\int_{C_1} F \\cdot d\\mathbf{r} = \\int_{0}^{a} (x^2 - 0^2) \\, dx = \\frac{a^3}{3}\",\n    \"code\": \"line1 = sp.integrate(F_a[0].subs(y, 0), (x, 0, a_rect))\"\n})\nline1 = sp.integrate(F_a[0].subs(y, 0), (x, 0, a_rect))\n\n# Path 2: from (a,0) to (a,a) along x=a (dx=0)\n_steps.append({\n    \"description\": \"Line integral along right edge: x=a from y=0 to a\",\n    \"expression\": \"∫_{C2} F·dr = ∫_{y=0}^{a} 2*a*y dy\",\n    \"result\": \"a^3\",\n    \"latex\": r\"\\int_{C_2} F \\cdot d\\mathbf{r} = \\int_{0}^{a} 2a y \\, dy = a^3\",\n    \"code\": \"line2 = sp.integrate(F_a[1].subs(x, a_rect), (y, 0, a_rect))\"\n})\nline2 = sp.integrate(F_a[1].subs(x, a_rect), (y, 0, a_rect))\n\n# Path 3: from (a,a) to (0,a) along y=a (dy=0, reverse x direction)\n_steps.append({\n    \"description\": \"Line integral along top edge: y=a from x=a to 0 (reverse direction)\",\n    \"expression\": \"∫_{C3} F·dr = ∫_{x=a}^{0} (x^2 - a^2) dx\",\n    \"result\": \"2*a^3/3\",\n    \"latex\": r\"\\int_{C_3} F \\cdot d\\mathbf{r} = \\int_{a}^{0} (x^2 - a^2) \\, dx = \\frac{2a^3}{3}\",\n    \"code\": \"line3 = sp.integrate(F_a[0].subs(y, a_rect), (x, a_rect, 0))\"\n})\nline3 = sp.integrate(F_a[0].subs(y, a_rect), (x, a_rect, 0))\n\n# Path 4: from (0,a) to (0,0) along x=0 (dx=0, reverse y direction)\n_steps.append({\n    \"description\": \"Line integral along left edge: x=0 from y=a to 0 (reverse direction)\",\n    \"expression\": \"∫_{C4} F·dr = ∫_{y=a}^{0} 0 dy\",\n    \"result\": \"0\",\n    \"latex\": r\"\\int_{C_4} F \\cdot d\\mathbf{r} = \\int_{a}^{0} 0 \\, dy = 0\",\n    \"code\": \"line4 = sp.integrate(F_a[1].subs(x, 0), (y, a_rect, 0))\"\n})\nline4 = sp.integrate(F_a[1].subs(x, 0), (y, a_rect, 0))\n\n_steps.append({\n    \"description\": \"Total line integral around closed rectangle\",\n    \"expression\": \"∮_C F·dr = line1 + line2 + line3 + line4\",\n    \"result\": \"2*a^3\",\n    \"latex\": r\"\\oint_C F \\cdot d\\mathbf{r} = \\frac{a^3}{3} + a^3 + \\frac{2a^3}{3} + 0 = 2a^3\",\n    \"code\": \"line_integral_total = line1 + line2 + line3 + line4\"\n})\nline_integral_total = line1 + line2 + line3 + line4\n\n# ==================== PART (b) ====================\n_steps.append({\n    \"description\": \"Define vector field F for part (b)\",\n    \"expression\": \"F = (x + 2y + a*z)*i + (b*x - 3y - z)*j + (4*x + c*y + 2*z)*k\",\n    \"result\": \"F = (x + 2y + a z)i + (b x - 3y - z)j + (4x + c y + 2z)k\",\n    \"latex\": r\"F = (x + 2y + a z)\\mathbf{i} + (b x - 3y - z)\\mathbf{j} + (4x + c y + 2z)\\mathbf{k}\",\n    \"code\": \"F_b = sp.Matrix([x + 2*y + a*z, b*x - 3*y - z, 4*x + c*y + 2*z])\"\n})\nF_b = sp.Matrix([x + 2*y + a*z, b*x - 3*y - z, 4*x + c*y + 2*z])\n\n_steps.append({\n    \"description\": \"Compute curl of F for part (b)\",\n    \"expression\": \"curl_F_b = ∇ × F\",\n    \"result\": \"curl_F_b = (c + 1, a - 4, b - 2)\",\n    \"latex\": r\"\\nabla \\times F = \\begin{pmatrix} c + 1 \\\\ a - 4 \\\\ b - 2 \\end{pmatrix}\",\n    \"code\": \"curl_F_b = sp.Matrix([sp.diff(F_b[2], y) - sp.diff(F_b[1], z),\\n                      sp.diff(F_b[0], z) - sp.diff(F_b[2], x),\\n                      s"
+}

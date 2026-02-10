@@ -1,0 +1,156 @@
+{
+  "problem_number": 3,
+  "category": "text",
+  "problem_text": "(a) For the conformal transformation $w=z^{2}$ show that the circle $|z-1|=1$ transforms into the cardioid $R=2(1+cos~\\phi)$, where $Re^{i\\phi}$ in the $w$ plane. \n\n(b) Find the Laurent series expansions of the function $f(z)=\\frac{1}{(z-1)(z-2)};z\\in\\mathbb{C}-\\{1,2\\}$ from $z_{0}=0$ in each of the following domains: \n\ni. $|z|<1$ \n\nii. $1<|z|<2$ \n\niii. $|z|>2$ \n\n(c) Apply the Cauchy's Residue Theorem to evaluate $\\int_{C}\\frac{dz}{sin(iz)}$ where $C:|z|=4$.",
+  "success": true,
+  "category_detected": "complex_analysis",
+  "final_answer": "{'part_a': 'Under w = z², circle |z-1|=1 transforms to cardioid R = 2(1 + cos φ)', 'part_b': {'|z|<1': 'f(z) = Σ_{n=0}∞ [-1 + (1/2)^{n+1}] zⁿ', '1<|z|<2': 'f(z) = -Σ_{n=0}∞ z^{-n-1} + Σ_{n=0}∞ (1/2)^{n+1} zⁿ', '|z|>2': 'f(z) = Σ_{n=0}∞ (2ⁿ - 1) z^{-n-1}'}, 'part_c': '∫_C dz/sin(iz) = -2π'}",
+  "final_answer_latex": "\\left\\{ \\mathtt{\\text{part\\_a}} : \\mathtt{\\text{Under w = z², circle |z-1|=1 transforms to cardioid R = 2(1 + cos φ)}}, \\  \\mathtt{\\text{part\\_b}} : \\left\\{ \\mathtt{\\text{1<|z|<2}} : \\mathtt{\\text{f(z) = -Σ\\_\\{n=0\\}∞ z\\textasciicircum\\{-n-1\\} + Σ\\_\\{n=0\\}∞ (1/2)\\textasciicircum\\{n+1\\} zⁿ}}, \\  \\mathtt{\\text{|z|<1}} : \\mathtt{\\text{f(z) = Σ\\_\\{n=0\\}∞ [-1 + (1/2)\\textasciicircum\\{n+1\\}] zⁿ}}, \\  \\mathtt{\\text{|z|>2}} : \\mathtt{\\text{f(z) = Σ\\_\\{n=0\\}∞ (2ⁿ - 1) z\\textasciicircum\\{-n-1\\}}}\\right\\}, \\  \\mathtt{\\text{part\\_c}} : \\mathtt{\\text{∫\\_C dz/sin(iz) = -2π}}\\right\\}",
+  "steps": [
+    {
+      "step_number": 1,
+      "description": "We start by parameterizing the given circle. The equation |z-1| = 1 describes a circle of radius 1 centered at z = 1 in the complex plane. The standard parameterization for such a circle is z = 1 + e^{iθ}, where θ runs from 0 to 2π. This represents all points at distance 1 from the center.",
+      "latex": "z = 1 + e^{i\\theta}",
+      "result": "z = 1 + cos θ + i sin θ",
+      "python_code": "theta = sp.symbols('theta', real=True)\nz_expr = 1 + sp.exp(sp.I * theta)"
+    },
+    {
+      "step_number": 2,
+      "description": "We apply the given conformal transformation w = z². Substituting our parameterization gives w = (1 + e^{iθ})². We expand this using the algebraic identity (a+b)² = a² + 2ab + b².",
+      "latex": "w = (1 + e^{i\\theta})^2 = 1 + 2e^{i\\theta} + e^{2i\\theta}",
+      "result": "w = 1 + 2e^{iθ} + e^{2iθ}",
+      "python_code": "w_expr = z_expr**2\nw_simplified = sp.simplify(w_expr.expand())"
+    },
+    {
+      "step_number": 3,
+      "description": "We want to express w in polar form as R e^{iφ}. Factor out e^{iθ} from the expression to group terms. Notice that 1 + e^{2iθ} can be rewritten using Euler's formula: 1 + e^{2iθ} = e^{iθ}(e^{-iθ} + e^{iθ}). This gives us a factor of 2 cos θ.",
+      "latex": "w = e^{i\\theta}(e^{-i\\theta} + 2 + e^{i\\theta}) = e^{i\\theta}(2 + 2\\cos\\theta)",
+      "result": "R e^{iφ} = e^{iθ}(2 + 2 cos θ)",
+      "python_code": "# Factor e^{iθ}\nw_factored = sp.factor(w_simplified, sp.exp(sp.I*theta))\n# Alternative: w = e^{iθ}(e^{-iθ} + 2 + e^{iθ})\nw_alt = sp.exp(sp.I*theta)*(sp.exp(-sp.I*theta) + 2 + sp.exp(sp.I*theta))"
+    },
+    {
+      "step_number": 4,
+      "description": "Now we can read off the polar coordinates. Since w = e^{iθ} · 2(1 + cos θ), and this is already in the form R e^{iφ}, we identify R as the magnitude and φ as the argument. Here, the argument of e^{iθ} is θ, so φ = θ. The magnitude is the coefficient 2(1 + cos θ).",
+      "latex": "R = 2(1 + \\cos\\theta), \\quad \\phi = \\theta",
+      "result": "R = 2(1 + cos θ), φ = θ",
+      "python_code": "R_expr = 2*(1 + sp.cos(theta))\nphi_expr = theta"
+    },
+    {
+      "step_number": 5,
+      "description": "Since φ = θ, we can replace θ with φ in the expression for R. This gives the polar equation of the transformed curve in the w-plane: R = 2(1 + cos φ). This is the equation of a cardioid, which is a heart-shaped curve.",
+      "latex": "R = 2(1 + \\cos\\phi)",
+      "result": "Cardioid in w-plane",
+      "python_code": "cardioid_eq = sp.Eq(sp.Symbol('R'), 2*(1 + sp.cos(sp.Symbol('phi'))))"
+    },
+    {
+      "step_number": 6,
+      "description": "Now for part (b). We first perform partial fraction decomposition on f(z) = 1/[(z-1)(z-2)]. We write it as A/(z-1) + B/(z-2). Solving gives A = -1, B = 1. Then we rewrite each term to prepare for series expansion: -1/(z-1) = 1/(1-z) and 1/(z-2) = -1/2 · 1/(1 - z/2).",
+      "latex": "f(z) = \\frac{1}{z-2} - \\frac{1}{z-1} = -\\frac{1}{1-z} + \\frac{1}{2} \\cdot \\frac{1}{1 - \\frac{z}{2}}",
+      "result": "f(z) = -1/(1-z) + 1/(2)·1/(1 - z/2)",
+      "python_code": "f_partial = sp.apart(f, z)"
+    },
+    {
+      "step_number": 7,
+      "description": "For the domain |z| < 1, both |z| and |z/2| are less than 1, so we can use the geometric series formula: 1/(1 - a) = Σ_{n=0}∞ aⁿ for |a| < 1. Apply this to both terms.",
+      "latex": "\\frac{1}{1-z} = \\sum_{n=0}^{\\infty} z^n, \\quad \\frac{1}{1 - \\frac{z}{2}} = \\sum_{n=0}^{\\infty} \\left(\\frac{z}{2}\\right)^n",
+      "result": "f(z) = -Σ zⁿ + (1/2) Σ (z/2)ⁿ",
+      "python_code": "n = sp.symbols('n', integer=True, nonnegative=True)\nseries1 = sp.summation(z**n, (n, 0, sp.oo))\nseries2 = sp.summation((z/2)**n, (n, 0, sp.oo))\nf_series_i = -series1 + (1/2)*series2"
+    },
+    {
+      "step_number": 8,
+      "description": "Substitute the series into f(z) and combine them into a single series. Since both series converge in |z| < 1, we can combine term-by-term. This gives a Taylor series (no negative powers) valid inside the smallest singularity at |z|=1.",
+      "latex": "f(z) = -\\sum_{n=0}^{\\infty} z^n + \\frac{1}{2} \\sum_{n=0}^{\\infty} \\left(\\frac{z}{2}\\right)^n = \\sum_{n=0}^{\\infty} \\left[ -1 + \\left(\\frac{1}{2}\\right)^{n+1} \\right] z^n",
+      "result": "Laurent series (actually Taylor) for |z|<1",
+      "python_code": "coeff_i = -1 + (1/2)**(n+1)\nseries_i = sp.summation(coeff_i * z**n, (n, 0, sp.oo))"
+    },
+    {
+      "step_number": 9,
+      "description": "For the annulus 1 < |z| < 2, we need different expansions because |z| > 1 but |z/2| < 1. For 1/(z-1), factor out z to get 1/(z(1 - 1/z)) and use geometric series in 1/z (since |1/z| < 1). For 1/(1 - z/2), we still use expansion in z/2.",
+      "latex": "\\frac{1}{z-1} = \\frac{1}{z} \\cdot \\frac{1}{1 - \\frac{1}{z}} = \\frac{1}{z} \\sum_{n=0}^{\\infty} \\left(\\frac{1}{z}\\right)^n, \\quad \\frac{1}{1 - \\frac{z}{2}} = \\sum_{n=0}^{\\infty} \\left(\\frac{z}{2}\\right)^n",
+      "result": "f(z) = - (1/z) Σ (1/z)ⁿ + (1/2) Σ (z/2)ⁿ",
+      "python_code": "series1_ii = (1/z) * sp.summation((1/z)**n, (n, 0, sp.oo))\nseries2_ii = sp.summation((z/2)**n, (n, 0, sp.oo))\nf_series_ii = -series1_ii + (1/2)*series2_ii"
+    },
+    {
+      "step_number": 10,
+      "description": "Combine the two series. The first gives negative powers of z (since it has 1/zⁿ⁺¹), and the second gives positive powers. This is the Laurent series valid in the annulus, containing both positive and negative powers.",
+      "latex": "f(z) = -\\sum_{n=0}^{\\infty} z^{-n-1} + \\sum_{n=0}^{\\infty} \\left(\\frac{1}{2}\\right)^{n+1} z^n",
+      "result": "Laurent series with both negative and positive powers",
+      "python_code": "coeff_neg = -1  # for z^{-n-1}\ncoeff_pos = (1/2)**(n+1)\nseries_ii_neg = sp.summation(coeff_neg * z**(-n-1), (n, 0, sp.oo))\nseries_ii_pos = sp.summation(coeff_pos * z**n, (n, 0, sp.oo))\nseries_ii = series_ii_neg + series_ii_pos"
+    },
+    {
+      "step_number": 11,
+      "description": "For |z| > 2, both |1/z| and |2/z| are less than 1. So we factor out z from each denominator and expand in powers of 1/z. Write 1/(z-2) = (1/z)·1/(1 - 2/z) and similarly for 1/(z-1).",
+      "latex": "\\frac{1}{z-1} = \\frac{1}{z} \\cdot \\frac{1}{1 - \\frac{1}{z}} = \\frac{1}{z} \\sum_{n=0}^{\\infty} \\left(\\frac{1}{z}\\right)^n, \\quad \\frac{1}{z-2} = \\frac{1}{z} \\cdot \\frac{1}{1 - \\frac{2}{z}} = \\frac{1}{z} \\sum_{n=0}^{\\infty} \\left(\\frac{2}{z}\\right)^n",
+      "result": "f(z) = (1/z) Σ (2/z)ⁿ - (1/z) Σ (1/z)ⁿ",
+      "python_code": "series1_iii = (1/z) * sp.summation((1/z)**n, (n, 0, sp.oo))\nseries2_iii = (1/z) * sp.summation((2/z)**n, (n, 0, sp.oo))\nf_series_iii = series2_iii - series1_iii"
+    },
+    {
+      "step_number": 12,
+      "description": "Combine the series. Both contribute only negative powers of z. Subtract the first series from the second (since f = 1/(z-2) - 1/(z-1)) and combine coefficients for each power of z.",
+      "latex": "f(z) = \\sum_{n=0}^{\\infty} \\left( 2^n - 1 \\right) z^{-n-1}",
+      "result": "Laurent series with only negative powers",
+      "python_code": "coeff_iii = 2**n - 1\nseries_iii = sp.summation(coeff_iii * z**(-n-1), (n, 0, sp.oo))"
+    },
+    {
+      "step_number": 13,
+      "description": "Now part (c). We need to find singularities of f(z) = 1/sin(iz). Singularities occur where denominator is zero: sin(iz) = 0. Using sin(ζ)=0 ⇔ ζ = nπ, n∈ℤ, we set iz = nπ, so z = -i nπ.",
+      "latex": "\\sin(iz) = 0 \\Rightarrow iz = n\\pi, \\; n \\in \\mathbb{Z} \\Rightarrow z = -i n\\pi",
+      "result": "z = -i nπ",
+      "python_code": "n = sp.symbols('n', integer=True)\nsing_eq = sp.Eq(sp.sin(sp.I*z), 0)\nsing_solutions = sp.solve(sing_eq, z)"
+    },
+    {
+      "step_number": 14,
+      "description": "We integrate over the circle |z|=4. We need poles inside this contour. Compute |z| = |n|π. Require |n|π < 4. Since π ≈ 3.14, possible n are -1, 0, 1. So three poles inside: z = 0, z = iπ, z = -iπ.",
+      "latex": "|z| = |n|\\pi < 4 \\Rightarrow n = -1, 0, 1",
+      "result": "n = -1, 0, 1 (since π ≈ 3.14)",
+      "python_code": "poles = []\nfor n_val in range(-2, 3):\n    z_val = -sp.I * n_val * sp.pi\n    if abs(z_val.evalf()) < 4:\n        poles.append(z_val)\npoles_inside = poles"
+    },
+    {
+      "step_number": 15,
+      "description": "Compute residue at z = 0. This is a simple pole (since sin(iz) has a simple zero at z=0). Use formula Res(f, z₀) = lim_{z→z₀} (z - z₀) f(z). Alternatively, since sin(iz) ≈ iz near 0, we get Res = 1/(i cos(0)) = -i.",
+      "latex": "\\operatorname{Res}(f, 0) = \\lim_{z \\to 0} z \\cdot \\frac{1}{\\sin(iz)} = \\frac{1}{i \\cos(0)} = -i",
+      "result": "Res(f, 0) = -i",
+      "python_code": "f_sin = 1/sp.sin(sp.I*z)\nres0 = sp.limit(z * f_sin, z, 0)"
+    },
+    {
+      "step_number": 16,
+      "description": "Compute residue at z = -iπ. At z = -iπ, iz = π. sin(iz) has a simple zero. Use Res(f, z₀) = 1 / (d/dz sin(iz) evaluated at z₀). Derivative is i cos(iz). So Res = 1/(i cos(i·(-iπ))) = 1/(i cos(-π)) = 1/(i·(-1)) = -1/i = i.",
+      "latex": "\\operatorname{Res}(f, -i\\pi) = \\frac{1}{\\left. \\frac{d}{dz} \\sin(iz) \\right|_{z=-i\\pi}} = \\frac{1}{i \\cos(i \\cdot (-i\\pi))} = \\frac{1}{i \\cos(-\\pi)} = \\frac{1}{i(-1)} = i",
+      "result": "Res(f, -iπ) = 1/(i cos(i·iπ)) = 1/(i cos(-π)) = -1/i = i",
+      "python_code": "res_minus = sp.limit((z + sp.I*sp.pi) * f_sin, z, -sp.I*sp.pi)"
+    },
+    {
+      "step_number": 17,
+      "description": "Similarly, at z = iπ, iz = -π. Derivative same: i cos(iz). Evaluate at z = iπ: cos(i·iπ) = cos(-π) = -1. So Res = 1/(i·(-1)) = i.",
+      "latex": "\\operatorname{Res}(f, i\\pi) = \\frac{1}{i \\cos(i \\cdot i\\pi)} = \\frac{1}{i \\cos(-\\pi)} = \\frac{1}{i(-1)} = i",
+      "result": "Res(f, iπ) = 1/(i cos(i·iπ)) = 1/(i cos(π)) = -1/i = i",
+      "python_code": "res_plus = sp.limit((z - sp.I*sp.pi) * f_sin, z, sp.I*sp.pi)"
+    },
+    {
+      "step_number": 18,
+      "description": "Apply Cauchy's Residue Theorem: ∫_C f(z) dz = 2πi × (sum of residues inside C). Sum residues: (-i) + i + i = i. Multiply by 2πi to get the integral value.",
+      "latex": "\\int_C f(z) \\, dz = 2\\pi i \\left[ (-i) + i + i \\right] = 2\\pi i \\cdot i = -2\\pi",
+      "result": "2πi [ (-i) + i + i ] = 2πi · i = -2π",
+      "python_code": "total_res = res0 + res_minus + res_plus\nintegral_value = 2*sp.pi*sp.I * total_res\nintegral_simplified = sp.simplify(integral_value)"
+    }
+  ],
+  "verifications": [
+    {
+      "library": "SymPy (symbolic)",
+      "result": "{'part_a': 'Under w = z², circle |z-1|=1 transforms to cardioid R = 2(1 + cos φ)', 'part_b': {'|z|<1': 'f(z) = Σ_{n=0}∞ [-1 + (1/2)^{n+1}] zⁿ', '1<|z|<2': 'f(z) = -Σ_{n=0}∞ z^{-n-1} + Σ_{n=0}∞ (1/2)^{n+1} zⁿ', '|z|>2': 'f(z) = Σ_{n=0}∞ (2ⁿ - 1) z^{-n-1}'}, 'part_c': '∫_C dz/sin(iz) = -2π'}",
+      "matches": true
+    },
+    {
+      "library": "NumPy/SciPy (numerical)",
+      "result": "{'part_a': 'Under w = z², circle |z-1|=1 transforms to cardioid R = 2(1 + cos φ)', 'part_b': {'|z|<1': 'f(z) = Σ_{n=0}∞ [-1 + (1/2)^{n+1}] zⁿ', '1<|z|<2': 'f(z) = -Σ_{n=0}∞ z^{-n-1} + Σ_{n=0}∞ (1/2)^{n+1} zⁿ', '|z|>2': 'f(z) = Σ_{n=0}∞ (2ⁿ - 1) z^{-n-1}'}, 'part_c': '∫_C dz/sin(iz) = -2π'}",
+      "matches": true
+    },
+    {
+      "library": "mpmath (arbitrary precision)",
+      "result": "{'part_a': 'Under w = z², circle |z-1|=1 transforms to cardioid R = 2(1 + cos φ)', 'part_b': {'|z|<1': 'f(z) = Σ_{n=0}∞ [-1 + (1/2)^{n+1}] zⁿ', '1<|z|<2': 'f(z) = -Σ_{n=0}∞ z^{-n-1} + Σ_{n=0}∞ (1/2)^{n+1} zⁿ', '|z|>2': 'f(z) = Σ_{n=0}∞ (2ⁿ - 1) z^{-n-1}'}, 'part_c': '∫_C dz/sin(iz) = -2π'}",
+      "matches": true
+    }
+  ],
+  "error": null,
+  "generated_code": "import sympy as sp\nimport numpy as np\nimport math\n\n# Initialize steps list\n_steps = []\n\n# Part (a): Show that under w = z², circle |z-1|=1 transforms to cardioid R = 2(1+cos φ)\n_step_a1 = {\n    \"description\": \"Parameterize the circle |z-1|=1\",\n    \"expression\": \"z = 1 + e^{iθ}\",\n    \"result\": \"z = 1 + cos θ + i sin θ\",\n    \"latex\": r\"z = 1 + e^{i\\theta}\",\n    \"code\": \"theta = sp.symbols('theta', real=True)\\nz_expr = 1 + sp.exp(sp.I * theta)\"\n}\n_steps.append(_step_a1)\n\n_step_a2 = {\n    \"description\": \"Compute w = z²\",\n    \"expression\": \"w = (1 + e^{iθ})²\",\n    \"result\": \"w = 1 + 2e^{iθ} + e^{2iθ}\",\n    \"latex\": r\"w = (1 + e^{i\\theta})^2\",\n    \"code\": \"w_expr = z_expr**2\\nw_simplified = sp.simplify(w_expr.expand())\"\n}\n_steps.append(_step_a2)\n\n_step_a3 = {\n    \"description\": \"Express w in polar form w = R e^{iφ}\",\n    \"expression\": \"R e^{iφ} = e^{iθ}(e^{-iθ} + 2 + e^{iθ})\",\n    \"result\": \"R e^{iφ} = e^{iθ}(2 + 2 cos θ)\",\n    \"latex\": r\"R e^{i\\phi} = e^{i\\theta}(e^{-i\\theta} + 2 + e^{i\\theta})\",\n    \"code\": \"# Factor e^{iθ}\\nw_factored = sp.factor(w_simplified, sp.exp(sp.I*theta))\\n# Alternative: w = e^{iθ}(e^{-iθ} + 2 + e^{iθ})\\nw_alt = sp.exp(sp.I*theta)*(sp.exp(-sp.I*theta) + 2 + sp.exp(sp.I*theta))\"\n}\n_steps.append(_step_a3)\n\n_step_a4 = {\n    \"description\": \"Simplify to get R and φ\",\n    \"expression\": \"R e^{iφ} = e^{iθ} · 2(1 + cos θ)\",\n    \"result\": \"R = 2(1 + cos θ), φ = θ\",\n    \"latex\": r\"R e^{i\\phi} = e^{i\\theta} \\cdot 2(1 + \\cos \\theta)\",\n    \"code\": \"R_expr = 2*(1 + sp.cos(theta))\\nphi_expr = theta\"\n}\n_steps.append(_step_a4)\n\n_step_a5 = {\n    \"description\": \"Final cardioid equation\",\n    \"expression\": \"R = 2(1 + cos φ)\",\n    \"result\": \"Cardioid in w-plane\",\n    \"latex\": r\"R = 2(1 + \\cos \\phi)\",\n    \"code\": \"cardioid_eq = sp.Eq(sp.Symbol('R'), 2*(1 + sp.cos(sp.Symbol('phi'))))\"\n}\n_steps.append(_step_a5)\n\n# Part (b): Laurent series of f(z) = 1/[(z-1)(z-2)] about z₀=0\nz = sp.symbols('z')\nf = 1/((z-1)*(z-2))\n\n_step_b1 = {\n    \"description\": \"Partial fraction decomposition\",\n    \"expression\": \"f(z) = 1/(z-2) - 1/(z-1)\",\n    \"result\": \"f(z) = -1/(1-z) + 1/(2)·1/(1 - z/2)\",\n    \"latex\": r\"f(z) = \\frac{1}{z-2} - \\frac{1}{z-1}\",\n    \"code\": \"f_partial = sp.apart(f, z)\"\n}\n_steps.append(_step_b1)\n\n# Domain i: |z| < 1\n_step_b2_i = {\n    \"description\": \"For |z| < 1: expand both terms as geometric series\",\n    \"expression\": \"1/(1-z) = Σ_{n=0}∞ zⁿ, 1/(1 - z/2) = Σ_{n=0}∞ (z/2)ⁿ\",\n    \"result\": \"f(z) = -Σ zⁿ + (1/2) Σ (z/2)ⁿ\",\n    \"latex\": r\"\\frac{1}{1-z} = \\sum_{n=0}^{\\infty} z^n,\\quad \\frac{1}{1 - z/2} = \\sum_{n=0}^{\\infty} \\left(\\frac{z}{2}\\right)^n\",\n    \"code\": \"n = sp.symbols('n', integer=True, nonnegative=True)\\nseries1 = sp.summation(z**n, (n, 0, sp.oo))\\nseries2 = sp.summation((z/2)**n, (n, 0, sp.oo))\\nf_series_i = -series1 + (1/2)*series2\"\n}\n_steps.append(_step_b2_i)\n\n_step_b3_i = {\n    \"description\": \"Combine series for |z| < 1\",\n    \"expression\": \"f(z) = Σ_{n=0}∞ [ -1 + (1/2)^{n+1} ] zⁿ\",\n    \"result\": \"Laurent series (actually Taylor) for |z|<1\",\n    \"latex\": r\"f(z) = \\sum_{n=0}^{\\infty} \\left[-1 + \\left(\\frac{1}{2}\\right)^{n+1}\\right] z^n\",\n    \"code\": \"coeff_i = -1 + (1/2)**(n+1)\\nseries_i = sp.summation(coeff_i * z**n, (n, 0, sp.oo))\"\n}\n_steps.append(_step_b3_i)\n\n# Domain ii: 1 < |z| < 2\n_step_b4_ii = {\n    \"description\": \"For 1 < |z| < 2: rewrite 1/(z-1) = (1/z)·1/(1 - 1/z)\",\n    \"expression\": \"1/(z-1) = (1/z) Σ_{n=0}∞ (1/z)ⁿ, 1/(1 - z/2) = Σ_{n=0}∞ (z/2)ⁿ\",\n    \"result\": \"f(z) = - (1/z) Σ (1/z)ⁿ + (1/2) Σ (z/2)ⁿ\",\n    \"latex\": r\"\\frac{1}{z-1} = \\frac{1}{z} \\sum_{n=0}^{\\infty} \\left(\\frac{1}{z}\\right)^n,\\quad \\frac{1}{1 - z/2} = \\sum_{n=0}^{\\infty} \\left(\\frac{z}{2}\\right)^n\",\n    \"code\": \"series1_ii = (1/z) * sp.summation((1/z)**n, (n, 0, sp.oo))\\nseries2_ii = sp.summation((z/2)**n, (n, 0, sp.oo))\\nf_series_ii = -series1_ii + (1/2)*series2_ii\"\n}\n_steps.append(_step_b4_ii)\n\n_step_b5_ii = {\n    \"description\": \"Combine for 1 < |z| < 2\",\n    \"expression\": \"f(z) = -Σ_{n=0}∞ z^{-n-1} + Σ_{n=0}∞ (1/2)^{n+1} zⁿ\",\n    \"result\": \"Laurent series with both negative and positive powers\",\n    \"latex\": r\"f(z) = -\\sum_{n=0}^{\\infty} z^{-n-1} + \\sum_{n=0}^{\\infty} \\left(\\frac{1}{2}\\right)^{n+1} z^n\",\n    \"code\": \"coeff_neg = -1  # for z^{-n-1}\\ncoeff_pos = (1/2)**(n+1)\\nseries_ii_neg = sp.summation(coeff_neg * z**(-n-1), (n, 0, sp.oo))\\nseries_ii_pos = sp.summation(coeff_pos * z**n, (n, 0, sp.oo))\\nseries_ii = series_ii_neg + series_ii_pos\"\n}\n_steps.append(_step_b5_ii)\n\n# Domain iii: |z| > 2\n_step_b6_iii = {\n    \"description\": \"For |z| > 2: rewrite both terms as series in 1/z\",\n    \"expression\": \"1/(z-1) = (1/z)·1/(1 - 1/z), 1/(z-2) = (1/z)·1/(1 - 2/z)\",\n    \"result\": \"f(z) = (1/z) Σ (2/z)ⁿ - (1/z) Σ (1/z)ⁿ\",\n    \"latex\": r\"\\frac{1}{z-1} = \\frac{1}{z} \\sum_{n=0}^{\\infty} \\left(\\frac{1}{z}\\right)^n,\\quad \\frac{1}{z-2} = \\frac{1}{z} \\sum_{n=0}^{\\infty} \\left(\\frac{2}{z}\\right)^n\",\n    \"code\": \"series1_iii = (1/z) * sp.summation((1/z)**n, (n, 0, sp.oo))\\nseries2_iii = (1/z) * sp.summation((2/z)**n, (n, 0, sp.oo))\\nf_se"
+}
