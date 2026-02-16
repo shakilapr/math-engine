@@ -1,9 +1,11 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Send, Image as ImageIcon, RotateCcw, Check, ChevronRight, ChevronDown, MessageCircle, Copy, X, AlertTriangle } from 'lucide-react';
+import { Send, Image as ImageIcon, RotateCcw, Check, ChevronRight, ChevronDown, Copy, X, AlertTriangle, MessageSquare, Loader2, PanelRightClose, PanelRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { MathRenderer } from '@/components/MathRenderer';
 import { ChatSidebar } from '@/components/ChatSidebar';
+import { SplitPane } from '@/components/SplitPane';
+import { StepProgress, type StepEventData } from '@/components/StepProgress';
 import ReactMarkdown from 'react-markdown';
 import axios from 'axios';
 
@@ -46,7 +48,6 @@ export interface SolveResponse {
 type Provider = 'gemini' | 'claude' | 'deepseek' | 'openai';
 
 
-
 export const SolverPage: React.FC = () => {
     const [input, setInput] = useState('');
     const [inputType, setInputType] = useState<'text' | 'latex' | 'image'>('text');
@@ -59,6 +60,20 @@ export const SolverPage: React.FC = () => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [provider, setProvider] = useState<Provider>('deepseek');
     const [availableProviders, setAvailableProviders] = useState<Provider[]>([]);
+    const [sessionId, setSessionId] = useState<string>('');
+
+    // Real-time progress events
+    const [stepEvents, setStepEvents] = useState<StepEventData[]>([]);
+
+    // Step comments
+    const [commentingStep, setCommentingStep] = useState<number | null>(null);
+    const [stepComment, setStepComment] = useState('');
+    const [commentLoading, setCommentLoading] = useState(false);
+
+    // Sticky input — freeze input after solve
+    const [frozenInput, setFrozenInput] = useState<string>('');
+    const [hasSolved, setHasSolved] = useState(false);
+
 
     useEffect(() => {
         // Fetch configured keys
@@ -66,30 +81,72 @@ export const SolverPage: React.FC = () => {
             const configured: Provider[] = res.data.configured;
             setAvailableProviders(configured);
 
-            // Auto-select if current selection is invalid or if only one exists
             if (configured.length === 1) {
                 setProvider(configured[0]);
             } else if (configured.length > 0 && !configured.includes(provider)) {
                 setProvider(configured[0]);
             }
         }).catch(console.error);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const handleSolve = async () => {
         if (!input.trim() && !imagePreview) return;
         setLoading(true);
         setResult(null);
+        setStepEvents([]);
+        setFrozenInput(input);
+        setHasSolved(true);
+        setCommentingStep(null);
+
         try {
-            const response = await axios.post(`${API}/solve`, {
-                input: inputType === 'image' ? imagePreview : input,
-                input_type: inputType,
-                provider: provider,
-                show_steps: true,
-                visualize: true,
+            const response = await fetch(`${API}/solve?stream=true`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    input: inputType === 'image' ? imagePreview : input,
+                    input_type: inputType,
+                    provider: provider,
+                    show_steps: true,
+                    visualize: true,
+                })
             });
-            setResult(response.data);
+
+            if (!response.body) throw new Error("No response body");
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+
+                for (const line of lines) {
+                    if (!line.trim()) continue;
+                    try {
+                        const event = JSON.parse(line);
+                        if (event.type === 'step_event') {
+                            setStepEvents(prev => [...prev, event as StepEventData]);
+                        } else if (event.type === 'result') {
+                            setResult(event.data);
+                            if (event.session_id) {
+                                setSessionId(event.session_id);
+                            }
+                        } else if (event.type === 'error') {
+                            throw new Error(event.message);
+                        }
+                    } catch (e) {
+                        console.error("Error parsing stream:", e);
+                    }
+                }
+            }
         } catch (error: unknown) {
-            const err = error as { response?: { data?: { detail?: string } }; message?: string };
+            const err = error as { message?: string };
             setResult({
                 success: false,
                 problem_latex: '',
@@ -100,7 +157,7 @@ export const SolverPage: React.FC = () => {
                 generated_code: '',
                 verifications: [],
                 visualizations: [],
-                error: err.response?.data?.detail || err.message || 'Failed to connect to backend',
+                error: err.message || 'Failed to connect to backend',
             });
         } finally {
             setLoading(false);
@@ -124,7 +181,6 @@ export const SolverPage: React.FC = () => {
         reader.readAsDataURL(file);
     };
 
-    // Clipboard paste support for images
     const handlePaste = useCallback((e: React.ClipboardEvent) => {
         const items = e.clipboardData?.items;
         if (!items) return;
@@ -159,9 +215,42 @@ export const SolverPage: React.FC = () => {
         setInput('');
     };
 
-    // Callback for chat corrections
     const handleCorrection = (correctedResult: SolveResponse) => {
         setResult(correctedResult);
+    };
+
+    const handleNewProblem = () => {
+        setHasSolved(false);
+        setResult(null);
+        setStepEvents([]);
+        setFrozenInput('');
+        setCommentingStep(null);
+        setSessionId('');
+    };
+
+    // Submit a comment on a step
+    const submitStepComment = async (stepIndex: number) => {
+        if (!stepComment.trim() || !sessionId) return;
+        setCommentLoading(true);
+        try {
+            const res = await axios.post(`${API}/step/comment`, {
+                step_index: stepIndex,
+                comment: stepComment,
+                session_id: sessionId,
+                provider: provider,
+            });
+            if (res.data.success && res.data.edited_step && result) {
+                const newSteps = [...result.steps];
+                newSteps[stepIndex] = res.data.edited_step;
+                setResult({ ...result, steps: newSteps });
+                setStepComment('');
+                setCommentingStep(null);
+            }
+        } catch (err) {
+            console.error('Failed to submit step comment:', err);
+        } finally {
+            setCommentLoading(false);
+        }
     };
 
     const tabs = [
@@ -170,129 +259,153 @@ export const SolverPage: React.FC = () => {
         { id: 'image' as const, label: 'Image' },
     ];
 
-    return (
-        <div className="h-full flex" >
-            {/* Main Solver */}
-            < div className="flex-1 overflow-auto" >
-                <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
-                    {/* Header */}
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-xl font-semibold text-foreground">Solver</h1>
-                            <p className="text-sm text-muted-foreground mt-0.5">
-                                Enter a math problem to get a step-by-step solution
-                            </p>
-                        </div>
+    // ── Left Panel: Problem & Solution ──
+    const leftPanel = (
+        <div className="h-full overflow-auto">
+            <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-xl font-semibold text-foreground">Solver</h1>
+                        <p className="text-sm text-muted-foreground mt-0.5">
+                            Enter a math problem to get a step-by-step solution
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        {hasSolved && (
+                            <Button variant="outline" size="sm" onClick={handleNewProblem} className="gap-1.5 text-xs">
+                                <RotateCcw className="h-3.5 w-3.5" />
+                                New Problem
+                            </Button>
+                        )}
                         <Button
                             variant={chatOpen ? 'default' : 'outline'}
                             size="sm"
                             onClick={() => setChatOpen(!chatOpen)}
                             className="gap-1.5 text-xs"
                         >
-                            <MessageCircle className="h-3.5 w-3.5" />
-                            {chatOpen ? 'Close' : 'Chat'}
-                        </Button>
-                    </div>
-
-                    {/* Input Card */}
-                    <div className="border border-border rounded-lg bg-card overflow-hidden">
-                        {/* Tabs */}
-                        <div className="flex border-b border-border items-center justify-between pr-2">
-                            <div className="flex">
-                                {tabs.map(t => (
-                                    <button
-                                        key={t.id}
-                                        onClick={() => { setInputType(t.id); if (t.id !== 'image') setImagePreview(null); }}
-                                        className={`px-4 py-2.5 text-xs font-medium transition-colors relative ${inputType === t.id
-                                            ? 'text-foreground'
-                                            : 'text-muted-foreground hover:text-foreground'
-                                            }`}
-                                    >
-                                        {t.label}
-                                        {inputType === t.id && (
-                                            <div className="absolute bottom-0 left-0 right-0 h-px bg-foreground" />
-                                        )}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Provider Selector - Only show if we have keys */}
-                        {availableProviders.length > 1 && (
-                            <select
-                                value={provider}
-                                onChange={(e) => setProvider(e.target.value as Provider)}
-                                className="h-6 text-[10px] bg-card border border-border rounded px-2 focus:outline-none focus:ring-1 focus:ring-ring text-foreground hover:bg-accent transition-colors"
-                            >
-                                <option value="deepseek" disabled={!availableProviders.includes('deepseek')}>DeepSeek-V3 {availableProviders.includes('deepseek') ? '' : '(Not configured)'}</option>
-                                <option value="gemini" disabled={!availableProviders.includes('gemini')}>Gemini 2.0 {availableProviders.includes('gemini') ? '' : '(Not configured)'}</option>
-                                <option value="claude" disabled={!availableProviders.includes('claude')}>Claude 3.5 {availableProviders.includes('claude') ? '' : '(Not configured)'}</option>
-                                <option value="openai" disabled={!availableProviders.includes('openai')}>GPT-4o {availableProviders.includes('openai') ? '' : '(Not configured)'}</option>
-                            </select>
-                        )}
-                    </div>
-
-                    {/* Input area */}
-                    <div className="p-4">
-                        {inputType === 'image' && imagePreview ? (
-                            <div className="relative">
-                                <button
-                                    onClick={clearImage}
-                                    className="absolute top-2 right-2 z-10 p-1 rounded bg-black/60 hover:bg-black/80 text-white transition-colors"
-                                >
-                                    <X className="h-3.5 w-3.5" />
-                                </button>
-                                <img
-                                    src={imagePreview}
-                                    alt="Math problem"
-                                    className="max-h-56 rounded-md border border-border mx-auto"
-                                />
-                            </div>
-                        ) : (
-                            <Textarea
-                                value={input}
-                                onChange={(e) => setInput(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                onPaste={handlePaste}
-                                placeholder={
-                                    inputType === 'latex'
-                                        ? '\\int_0^\\pi \\sin(x)\\,dx'
-                                        : 'e.g. What is the derivative of x^3 + 2x?'
-                                }
-                                className="min-h-[120px] text-sm bg-transparent border-0 focus-visible:ring-0 resize-none placeholder:text-muted-foreground/50 font-mono"
-                            />
-                        )}
-                    </div>
-
-                    {/* Actions bar */}
-                    <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-muted/30">
-                        <div className="flex items-center gap-2">
-                            <label className="cursor-pointer">
-                                <input
-                                    ref={fileInputRef}
-                                    type="file"
-                                    accept="image/*"
-                                    className="hidden"
-                                    onChange={handleImageUpload}
-                                />
-                                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
-                                    <ImageIcon className="h-3.5 w-3.5" />
-                                    <span>Upload image</span>
-                                </div>
-                            </label>
-                            <span className="text-[10px] text-muted-foreground/50">or paste with Ctrl+V</span>
-                        </div>
-                        <Button
-                            onClick={handleSolve}
-                            disabled={loading || (!input.trim() && !imagePreview)}
-                            size="sm"
-                            className="gap-1.5"
-                        >
-                            {loading ? <RotateCcw className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-                            {loading ? 'Solving...' : 'Solve'}
+                            {chatOpen ? <PanelRightClose className="h-3.5 w-3.5" /> : <PanelRight className="h-3.5 w-3.5" />}
+                            {chatOpen ? 'Close Chat' : 'Open Chat'}
                         </Button>
                     </div>
                 </div>
+
+                {/* Sticky Input — always visible at top */}
+                <div className={`border border-border rounded-lg bg-card overflow-hidden ${hasSolved ? 'opacity-80' : ''}`}>
+                    {/* Frozen input display */}
+                    {hasSolved ? (
+                        <div className="px-4 py-3 flex items-center justify-between bg-muted/30">
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Problem</span>
+                                <span className="text-sm text-foreground font-mono">{frozenInput}</span>
+                            </div>
+                            <Button variant="ghost" size="sm" onClick={handleNewProblem} className="text-xs h-7">
+                                Edit
+                            </Button>
+                        </div>
+                    ) : (
+                        <>
+                            {/* Tabs */}
+                            <div className="flex border-b border-border items-center justify-between pr-2">
+                                <div className="flex">
+                                    {tabs.map(t => (
+                                        <button
+                                            key={t.id}
+                                            onClick={() => { setInputType(t.id); if (t.id !== 'image') setImagePreview(null); }}
+                                            className={`px-4 py-2.5 text-xs font-medium transition-colors relative ${inputType === t.id
+                                                ? 'text-foreground'
+                                                : 'text-muted-foreground hover:text-foreground'
+                                                }`}
+                                        >
+                                            {t.label}
+                                            {inputType === t.id && (
+                                                <div className="absolute bottom-0 left-0 right-0 h-px bg-foreground" />
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Provider Selector */}
+                            {availableProviders.length > 1 && (
+                                <select
+                                    value={provider}
+                                    onChange={(e) => setProvider(e.target.value as Provider)}
+                                    className="h-6 text-[10px] bg-card border border-border rounded px-2 focus:outline-none focus:ring-1 focus:ring-ring text-foreground hover:bg-accent transition-colors ml-4 mt-2"
+                                >
+                                    <option value="deepseek" disabled={!availableProviders.includes('deepseek')}>DeepSeek-V3</option>
+                                    <option value="gemini" disabled={!availableProviders.includes('gemini')}>Gemini 2.0</option>
+                                    <option value="claude" disabled={!availableProviders.includes('claude')}>Claude 3.5</option>
+                                    <option value="openai" disabled={!availableProviders.includes('openai')}>GPT-4o</option>
+                                </select>
+                            )}
+
+                            {/* Input area */}
+                            <div className="p-4">
+                                {inputType === 'image' && imagePreview ? (
+                                    <div className="relative">
+                                        <button
+                                            onClick={clearImage}
+                                            className="absolute top-2 right-2 z-10 p-1 rounded bg-black/60 hover:bg-black/80 text-white transition-colors"
+                                        >
+                                            <X className="h-3.5 w-3.5" />
+                                        </button>
+                                        <img
+                                            src={imagePreview}
+                                            alt="Math problem"
+                                            className="max-h-56 rounded-md border border-border mx-auto"
+                                        />
+                                    </div>
+                                ) : (
+                                    <Textarea
+                                        value={input}
+                                        onChange={(e) => setInput(e.target.value)}
+                                        onKeyDown={handleKeyDown}
+                                        onPaste={handlePaste}
+                                        placeholder={
+                                            inputType === 'latex'
+                                                ? '\\int_0^\\pi \\sin(x)\\,dx'
+                                                : 'e.g. What is the derivative of x^3 + 2x?'
+                                        }
+                                        className="min-h-[120px] text-sm bg-transparent border-0 focus-visible:ring-0 resize-none placeholder:text-muted-foreground/50 font-mono"
+                                    />
+                                )}
+                            </div>
+
+                            {/* Actions bar */}
+                            <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-muted/30">
+                                <div className="flex items-center gap-2">
+                                    <label className="cursor-pointer">
+                                        <input
+                                            ref={fileInputRef}
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={handleImageUpload}
+                                        />
+                                        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
+                                            <ImageIcon className="h-3.5 w-3.5" />
+                                            <span>Upload image</span>
+                                        </div>
+                                    </label>
+                                    <span className="text-[10px] text-muted-foreground/50">or paste with Ctrl+V</span>
+                                </div>
+                                <Button
+                                    onClick={handleSolve}
+                                    disabled={loading || (!input.trim() && !imagePreview)}
+                                    size="sm"
+                                    className="gap-1.5"
+                                >
+                                    {loading ? <RotateCcw className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                                    {loading ? 'Solving...' : 'Solve'}
+                                </Button>
+                            </div>
+                        </>
+                    )}
+                </div>
+
+                {/* Real-time Progress */}
+                <StepProgress events={stepEvents} isActive={loading} />
 
                 {/* Error */}
                 {result && !result.success && (
@@ -365,7 +478,7 @@ export const SolverPage: React.FC = () => {
                             </div>
                         )}
 
-                        {/* Steps */}
+                        {/* Steps with comment icons */}
                         {result.steps.length > 0 && (
                             <div className="border border-border rounded-lg bg-card overflow-hidden">
                                 <div className="px-4 py-2.5 border-b border-border bg-muted/30">
@@ -375,12 +488,27 @@ export const SolverPage: React.FC = () => {
                                 </div>
                                 <div className="divide-y divide-border">
                                     {result.steps.map((step, idx) => (
-                                        <div key={idx} className="px-4 py-4">
+                                        <div key={idx} className="px-4 py-4 group">
                                             <div className="flex items-center gap-2.5 mb-2">
                                                 <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/10 text-primary text-[10px] font-bold shrink-0">
                                                     {step.step_number}
                                                 </span>
-                                                <span className="text-xs font-medium text-muted-foreground">Step {step.step_number}</span>
+                                                <span className="text-xs font-medium text-muted-foreground flex-1">Step {step.step_number}</span>
+
+                                                {/* Comment icon */}
+                                                <button
+                                                    onClick={() => {
+                                                        setCommentingStep(commentingStep === idx ? null : idx);
+                                                        setStepComment('');
+                                                    }}
+                                                    className={`p-1 rounded transition-colors ${commentingStep === idx
+                                                        ? 'bg-primary/10 text-primary'
+                                                        : 'text-muted-foreground/40 hover:text-muted-foreground opacity-0 group-hover:opacity-100'
+                                                        }`}
+                                                    title="Comment on this step"
+                                                >
+                                                    <MessageSquare className="h-3.5 w-3.5" />
+                                                </button>
                                             </div>
 
                                             <div className="prose prose-invert prose-sm max-w-none ml-[30px] prose-p:text-gray-300 prose-p:leading-relaxed prose-p:my-1">
@@ -397,6 +525,43 @@ export const SolverPage: React.FC = () => {
                                                 <div className="mt-2 ml-[30px] flex items-center gap-1.5 text-[11px] font-mono text-muted-foreground">
                                                     <ChevronRight className="h-3 w-3" />
                                                     <span>= {step.result}</span>
+                                                </div>
+                                            )}
+
+                                            {/* Inline comment box */}
+                                            {commentingStep === idx && (
+                                                <div className="mt-3 ml-[30px] border border-border rounded-lg bg-muted/20 p-3">
+                                                    <textarea
+                                                        value={stepComment}
+                                                        onChange={(e) => setStepComment(e.target.value)}
+                                                        placeholder="Describe what should change about this step..."
+                                                        className="w-full bg-transparent text-sm text-foreground border-0 focus:outline-none resize-none min-h-[60px] placeholder:text-muted-foreground/50"
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter' && !e.shiftKey) {
+                                                                e.preventDefault();
+                                                                submitStepComment(idx);
+                                                            }
+                                                        }}
+                                                    />
+                                                    <div className="flex items-center justify-end gap-2 mt-2">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => { setCommentingStep(null); setStepComment(''); }}
+                                                            className="text-xs h-7"
+                                                        >
+                                                            Cancel
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            onClick={() => submitStepComment(idx)}
+                                                            disabled={commentLoading || !stepComment.trim()}
+                                                            className="text-xs h-7 gap-1"
+                                                        >
+                                                            {commentLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                                                            Submit
+                                                        </Button>
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>
@@ -434,15 +599,30 @@ export const SolverPage: React.FC = () => {
                         )}
                     </div>
                 )}
-
             </div>
+        </div>
+    );
 
-            {/* Chat Sidebar */}
-            <ChatSidebar
-                open={chatOpen}
-                onClose={() => setChatOpen(false)}
-                solveResult={result}
-                onCorrection={handleCorrection}
+    // ── Right Panel: Chat ──
+    const rightPanel = (
+        <ChatSidebar
+            open={true}
+            onClose={() => setChatOpen(false)}
+            solveResult={result}
+            onCorrection={handleCorrection}
+            embedded={true}
+        />
+    );
+
+    return (
+        <div className="h-full flex">
+            <SplitPane
+                left={leftPanel}
+                right={rightPanel}
+                defaultSplit={65}
+                minLeft={400}
+                minRight={300}
+                rightCollapsed={!chatOpen}
             />
         </div>
     );

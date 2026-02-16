@@ -138,3 +138,36 @@ class PDFAnalysisResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     service: str
+
+
+# ── Step-Based Architecture Models ─────────────────────────────────────
+
+class StepCommentRequest(BaseModel):
+    """User comment on a specific solution step."""
+    step_index: int = Field(..., description="0-based index of the step to comment on")
+    comment: str = Field(..., description="User's comment/feedback on the step")
+    session_id: str = Field(..., description="Solve session ID to identify the solution")
+    provider: LLMProvider = Field(LLMProvider.GEMINI)
+
+
+class StepEventData(BaseModel):
+    """Granular event emitted during step-by-step solving."""
+    type: str = Field(..., description="Event type: thinking, script_selected, code_writing, executing, step_result, step_edited, error")
+    step_index: int = -1
+    status: str = ""
+    script_id: str = ""
+    script_name: str = ""
+    code: str = ""
+    result: str = ""
+    thinking: str = ""
+    diff: str = ""
+    description: str = ""
+    latex: str = ""
+
+
+class ScriptVersionEntry(BaseModel):
+    """A single version in a script's history."""
+    version: int
+    timestamp: float
+    commit_message: str
+    code_preview: str = Field("", description="First 200 chars of the versioned code")

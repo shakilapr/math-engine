@@ -8,7 +8,10 @@ import uuid
 import shutil
 import tempfile
 
-from fastapi import APIRouter, File, UploadFile, HTTPException
+import json
+import asyncio
+from fastapi import APIRouter, File, UploadFile, HTTPException, Query
+from fastapi.responses import StreamingResponse
 
 from api.models import (
     SolveRequest,
@@ -19,30 +22,103 @@ from api.models import (
     PDFAnalysisResponse,
     APIKeysUpdate,
     LLMProvider,
+    StepCommentRequest,
+    SolutionStep,
 )
-from core.engine import MathEngine
+from core.step_orchestrator import StepOrchestrator, StepEvent
 from llm.provider import set_api_keys, get_api_keys, get_llm_provider
 from pdf.analyzer import PDFAnalyzer
 from scripts.library_manager import ScriptLibrary
+from scripts.version_control import ScriptVersionControl
 
 router = APIRouter()
-engine = MathEngine()
+orchestrator = StepOrchestrator()
 pdf_analyzer = PDFAnalyzer()
 script_library = ScriptLibrary()
+version_control = ScriptVersionControl()
 
-# In-memory chat histories
+# In-memory chat histories and solve sessions
 _chat_histories: dict[str, list[dict]] = {}
+_solve_sessions: dict[str, list[SolutionStep]] = {}
 
 
 # ── Solve ──────────────────────────────────────────────────────────────
 
 
+@router.post("/solve")
+async def solve_problem(request: SolveRequest, stream: bool = Query(True)):
+    """Solve a math problem with step-by-step explanation. Streams granular events."""
+    session_id = uuid.uuid4().hex
 
-@router.post("/solve", response_model=SolveResponse)
-async def solve_problem(request: SolveRequest):
-    """Solve a math problem with step-by-step explanation."""
-    result = await engine.solve(request)
-    return result
+    if not stream:
+        result = await orchestrator.solve(request)
+        if result.steps:
+            _solve_sessions[session_id] = result.steps
+        return {"session_id": session_id, **result.dict()}
+
+    queue: asyncio.Queue = asyncio.Queue()
+
+    async def event_callback(event: StepEvent):
+        await queue.put(json.dumps({"type": "step_event", **event.to_dict()}) + "\n")
+
+    async def run_solve():
+        try:
+            result = await orchestrator.solve(request, event_callback=event_callback)
+            if result.steps:
+                _solve_sessions[session_id] = result.steps
+            await queue.put(json.dumps({
+                "type": "result",
+                "session_id": session_id,
+                "data": result.dict(),
+            }) + "\n")
+        except Exception as e:
+            await queue.put(json.dumps({"type": "error", "message": str(e)}) + "\n")
+        finally:
+            await queue.put(None)
+
+    async def event_generator():
+        task = asyncio.create_task(run_solve())
+        try:
+            while True:
+                data = await queue.get()
+                if data is None:
+                    break
+                yield data
+        except asyncio.CancelledError:
+             task.cancel()
+             raise
+        finally:
+             await task
+
+    return StreamingResponse(event_generator(), media_type="application/x-ndjson")
+
+
+# ── Step Comment ─────────────────────────────────────────────────────
+
+
+@router.post("/step/comment")
+async def comment_on_step(request: StepCommentRequest):
+    """Submit a comment on a specific solution step. LLM reviews and edits the step."""
+    session_steps = _solve_sessions.get(request.session_id)
+    if not session_steps:
+        raise HTTPException(status_code=404, detail="Solve session not found. Solve a problem first.")
+
+    if request.step_index < 0 or request.step_index >= len(session_steps):
+        raise HTTPException(status_code=400, detail=f"Step index {request.step_index} out of range")
+
+    edited_step = await orchestrator.comment_on_step(
+        session_steps=session_steps,
+        step_index=request.step_index,
+        comment=request.comment,
+        provider=request.provider,
+    )
+
+    if edited_step:
+        # Update the session
+        _solve_sessions[request.session_id][request.step_index] = edited_step
+        return {"success": True, "edited_step": edited_step.dict()}
+    else:
+        return {"success": False, "message": "Failed to process the comment"}
 
 
 # ── Chat ───────────────────────────────────────────────────────────────
@@ -133,7 +209,7 @@ async def get_api_key_status():
     return {"configured": configured}
 
 
-# ── Script Library ─────────────────────────────────────────────────────
+# ── Script Library & Catalog ───────────────────────────────────────────
 
 @router.get("/scripts")
 async def list_scripts():
@@ -145,3 +221,70 @@ async def list_scripts():
 async def search_scripts(q: str, category: str = ""):
     """Search the script library."""
     return script_library.search(q, category)
+
+
+@router.get("/scripts/catalog")
+async def get_catalog():
+    """Get the full script catalog grouped by category, for LLM selection."""
+    scripts = script_library.list_all()
+    catalog: dict[str, list] = {}
+    for s in scripts:
+        cat = s.get("category", "other")
+        catalog.setdefault(cat, []).append({
+            "id": s["id"],
+            "name": s.get("name", ""),
+            "description": s.get("description", ""),
+            "tags": s.get("tags", []),
+        })
+    return {"total": len(scripts), "categories": catalog}
+
+
+# ── Version Control ────────────────────────────────────────────────────
+
+@router.get("/scripts/versions")
+async def list_versioned_scripts():
+    """List all scripts with version history."""
+    return version_control.list_tracked_scripts()
+
+
+@router.get("/scripts/{script_id}/history")
+async def get_script_history(script_id: str):
+    """Get version history for a script."""
+    history = version_control.get_history(script_id)
+    if not history:
+        return {"script_id": script_id, "entries": []}
+    from dataclasses import asdict
+    return asdict(history)
+
+
+@router.get("/scripts/{script_id}/version/{version}")
+async def get_script_version(script_id: str, version: int):
+    """Get the code of a specific version."""
+    code = version_control.get_version_code(script_id, version)
+    if code is None:
+        raise HTTPException(status_code=404, detail="Version not found")
+    return {"script_id": script_id, "version": version, "code": code}
+
+
+@router.get("/scripts/{script_id}/diff")
+async def get_script_diff(script_id: str, v1: int = Query(...), v2: int = Query(...)):
+    """Get a diff between two versions of a script."""
+    return version_control.get_diff(script_id, v1, v2)
+
+
+@router.post("/scripts/{script_id}/rollback")
+async def rollback_script(script_id: str, target_version: int = Query(...)):
+    """Rollback a script to a previous version."""
+    # Find the library file path
+    for s in script_library.list_all():
+        if s.get("id") == script_id:
+            import os as _os
+            filepath = _os.path.join(
+                _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))),
+                "scripts", "library", s["filename"]
+            )
+            success = version_control.rollback(script_id, target_version, filepath)
+            if success:
+                return {"success": True, "message": f"Rolled back to version {target_version}"}
+            raise HTTPException(status_code=400, detail="Rollback failed")
+    raise HTTPException(status_code=404, detail="Script not found")

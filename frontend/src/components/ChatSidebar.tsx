@@ -18,6 +18,7 @@ interface ChatSidebarProps {
     onClose: () => void;
     solveResult?: SolveResponse | null;
     onCorrection?: (result: SolveResponse) => void;
+    embedded?: boolean; // When true, fills parent container (for SplitPane)
 }
 
 function buildContext(result: SolveResponse | null | undefined): string {
@@ -51,7 +52,7 @@ function buildContext(result: SolveResponse | null | undefined): string {
     return parts.join('\n');
 }
 
-export const ChatSidebar: React.FC<ChatSidebarProps> = ({ open, onClose, solveResult, onCorrection }) => {
+export const ChatSidebar: React.FC<ChatSidebarProps> = ({ open, onClose, solveResult, onCorrection, embedded = false }) => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
@@ -127,7 +128,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ open, onClose, solveRe
     if (!open) return null;
 
     return (
-        <div className="w-[360px] border-l border-border bg-card flex flex-col h-full">
+        <div className={`${embedded ? 'w-full' : 'w-[360px]'} border-l border-border bg-card flex flex-col h-full`}>
             {/* Header */}
             <div className="flex items-center justify-between px-4 h-14 border-b border-border shrink-0">
                 <div className="flex items-center gap-2">
@@ -168,8 +169,8 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ open, onClose, solveRe
                     <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                         <div
                             className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${msg.role === 'user'
-                                    ? 'bg-primary text-primary-foreground'
-                                    : 'bg-muted text-foreground'
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-muted text-foreground'
                                 }`}
                         >
                             {msg.isCorrection && (

@@ -79,12 +79,10 @@ class EditHistoryEntry:
 # ── Constants ──────────────────────────────────────────────────────────
 
 DEFAULT_ALLOWED_PATTERNS = [
-    "core/**/*.py",
+    # SECURITY: Self-improvement is sandboxed to scripts/ only.
+    # This prevents the LLM from modifying core engine, API, or LLM code.
     "scripts/**/*.py",
     "scripts/**/*.json",
-    "input/**/*.py",
-    "llm/**/*.py",
-    "pdf/**/*.py",
 ]
 
 # Files that should never be modified by the self-editor
